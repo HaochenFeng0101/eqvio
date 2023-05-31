@@ -35,9 +35,9 @@ struct StampedImage {
 };
 
 struct StampedDepthImage {
-    cv::Mat image; // The depth image data.
+    cv::Mat depthImage; // The depth image data.
     double stamp;  // The timestamp of the image.
-}
+};
 
 /** @brief The common interface of all dataset readers.
  *

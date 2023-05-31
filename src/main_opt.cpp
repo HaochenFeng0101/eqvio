@@ -147,7 +147,7 @@ int main(int argc, char const* argv[]) {
     std::cout << "The camera extrinsics (pose of the camera w.r.t. the IMU) are:\n"
               << filterSettings.cameraOffset.asMatrix() << std::endl;
     VIOFilter filter(filterSettings);
-
+    ////////////////////////////////////////////////////////////////////////////////////
     // Initialise the feature tracker
     GIFT::PointFeatureTracker featureTracker = GIFT::PointFeatureTracker(dataServer->camera());
     // GIFT::KeyPointFeatureTracker featureTracker = GIFT::KeyPointFeatureTracker(dataServer->camera);
