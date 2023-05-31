@@ -19,6 +19,10 @@
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
 
+// // Add two new data members in the class definition.
+// CSVFile depthCSVFile;
+// std::string depth_dir;
+
 ASLDatasetReader::ASLDatasetReader(const std::string& datasetMainDir) {
     // Set up required structures
     // --------------------------
@@ -73,6 +77,30 @@ std::unique_ptr<StampedImage> ASLDatasetReader::nextImage() {
     return std::make_unique<StampedImage>(temp);
 }
 
+//read depth img 
+std::unique_ptr<StampedDepthImage> ASLDatasetReader::nextDepthImage() {
+    if (!DepthFile) {
+        return nullptr;
+    }
+
+    CSVLine depthImageLine = DepthFile.nextLine();
+    std::string nextDepthImageFname;
+    double rawStamp;
+    depthImageLine >> rawStamp >> nextDepthImageFname;
+    nextDepthImageFname = depth_dir + "data/" + nextDepthImageFname;
+
+    if (*nextDepthImageFname.rbegin() == '\r') {
+        nextDepthImageFname.erase(nextDepthImageFname.end() - 1);
+    }
+
+    StampedDepthImage temp;
+    temp.stamp = 1e-9 * rawStamp - cameraLag;
+    // Assuming depth image is a grayscale image, 
+    // we use the imread function with the IMREAD_GRAYSCALE flag
+    temp.depthImage = cv::imread(nextDepthImageFname, cv::IMREAD_GRAYSCALE);
+    return std::make_unique<StampedDepthImage>(temp);
+}
+
 void ASLDatasetReader::readCamera(const std::string& cameraFileName) {
     YAML::Node cameraFileNode = YAML::LoadFile(cameraFileName);
 
@@ -100,6 +128,7 @@ void ASLDatasetReader::readCamera(const std::string& cameraFileName) {
     extrinsics_matrix.transposeInPlace();
     cameraExtrinsics = std::make_unique<liepp::SE3d>(extrinsics_matrix);
 }
+
 
 std::vector<StampedPose> ASLDatasetReader::groundtruth() {
     // Find the poses file

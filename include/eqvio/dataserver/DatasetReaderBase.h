@@ -34,6 +34,11 @@ struct StampedImage {
     double stamp;  ///< The time stamp of the image
 };
 
+struct StampedDepthImage {
+    cv::Mat image; // The depth image data.
+    double stamp;  // The timestamp of the image.
+}
+
 /** @brief The common interface of all dataset readers.
  *
  * This abstraction helps to create a common interface between different dataset formats like EuRoC and UZH-FPV. It is

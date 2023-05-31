@@ -75,6 +75,8 @@ endif()
 find_package(Eigen3 3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(yaml-cpp REQUIRED)
+#add
+find_package(GLUT REQUIRED)
 
 
 # Add GIFT
@@ -227,6 +229,7 @@ target_include_directories(eqvio_lib
     PUBLIC ${EIGEN_INCLUDE_DIRS}
     PUBLIC ${rosbag_INCLUDE_DIRS}
     PUBLIC ${cv_bridge_INCLUDE_DIRS}
+    PUBLIC ${GLUT_INCLUDE_DIRS}
 )
 
 target_link_libraries(eqvio_lib
@@ -235,6 +238,7 @@ target_link_libraries(eqvio_lib
     GIFT
     ${rosbag_LIBRARIES}
     ${cv_bridge_LIBRARIES}
+    ${GLUT_LIBRARIES}
 )
 
 if (${CMAKE_COMPILER_IS_GNUCC} AND ${CMAKE_CXX_COMPILER_VERSION} LESS 9.0)
