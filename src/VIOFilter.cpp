@@ -210,8 +210,13 @@ void VIOFilter::processVisionData(const VisionMeasurement& measurement) {
 
     VisionMeasurement matchedMeasurement = measurement;
     removeOutliers(matchedMeasurement);
-    addNewLandmarks(matchedMeasurement);
-
+    matchedMeasurement = processAndAddNewLandmarks(matchedMeasurement);
+     
+    // addNewLandmarks(matchedMeasurement);
+    
+    // std::cout << "matched measurement size" << matchedMeasurement.camCoordinates.size() << "filter size" << filterState.X.id.size() << std::endl;
+    
+    
     if (settings->removeLostLandmarks) {
         assert(matchedMeasurement.camCoordinates.size() == filterState.X.id.size());
         for (int i = filterState.X.id.size() - 1; i >= 0; --i) {
@@ -251,31 +256,104 @@ VisionMeasurement VIOFilter::getFeaturePredictions(const GIFT::GICameraPtr& camP
     return VisionMeasurement();
 }
 
+
+
 CSVLine& operator<<(CSVLine& line, const VIOFilter& filter) { return line << filter.filterState; }
 
 double VIOFilter::getTime() const { return filterState.currentTime; }
 
-void VIOFilter::addNewLandmarks(const VisionMeasurement& measurement) {
+
+void VIOFilter::addNewLandmarks(const VisionMeasurement& measurement) { //remove the const
     // Grab all the new landmarks
     std::vector<Landmark> newLandmarks;
+    //collect all the depth measurement
+    std::vector<double> depthMeasurements; 
+   
     for (const pair<const int, Vector2d>& cc : measurement.camCoordinates) {
         const int& ccId = cc.first;
         if (none_of(filterState.X.id.begin(), filterState.X.id.end(), [&ccId](const int& i) { return i == ccId; })) {
             Vector3d bearing = measurement.cameraPtr->undistortPoint(cc.second);
             newLandmarks.emplace_back(Landmark{bearing, ccId});
+            //add depth 
+            if(measurement.depthValue.find(ccId) != measurement.depthValue.end()) {
+                //unit of depth is mm
+                double depth = measurement.depthValue.at(ccId);
+                // if (depth == 0.0) {
+                //     // depth = getNonZeroDepthAround(depthImage, static_cast<int>(cc.second(0)), static_cast<int>(cc.second(1)));
+                //     // depth = initialDepth;
+                //     // std::cout << initialDepth << std::endl; 5
+                //     continue;
+                // }
+                // Push back either the original or the estimated depth
+                 // Print added landmark's id and depth 
+                // std::cout << "read lmk with depth Id: " << ccId << ", Depth: " << depth << std::endl;
+                depthMeasurements.push_back(depth);
+            } 
         }
     }
-    if (newLandmarks.empty())
+    for (const auto& depthPair : measurement.depthValue) {
+    std::cout << "Id: " << depthPair.first << ", Depth: " << depthPair.second << std::endl;
+    }
+    std::cout << "Total depth landmarks used: " << measurement.depthValue.size() << std::endl;
+
+    // // Iterate over camCoordinates and print each one
+    // for (const auto& [id, coordinates] : measurement.camCoordinates) {
+    //     std::cout << "Id: " << id 
+    //               << ", Coordinates: " << coordinates.transpose() 
+    //               << std::endl;
+    // }
+    
+    
+    if (newLandmarks.empty()|| depthMeasurements.empty())
         return;
 
-    // Initialise all landmarks to the median scene depth
-    double initialDepth = settings->useMedianDepth ? getMedianSceneDepth() : settings->initialSceneDepth;
-    for_each(newLandmarks.begin(), newLandmarks.end(), [&initialDepth](Landmark& blm) { blm.p *= initialDepth; });
+    // Multiply landmark positions by corresponding depth measurements
+    auto depth_it = depthMeasurements.begin();
+    std::for_each(newLandmarks.begin(), newLandmarks.end(), [&depth_it](Landmark& blm) {
+        blm.p *= *depth_it;
+        ++depth_it;
+    });
+
+    // for_each(newLandmarks.begin(), newLandmarks.end(), [&initialDepth](Landmark& blm) { blm.p *= initialDepth; });
+    //
     const int newN = newLandmarks.size();
     const Eigen::MatrixXd newLandmarksCov =
         Eigen::MatrixXd::Identity(3 * newN, 3 * newN) * settings->initialPointVariance;
     filterState.addNewLandmarks(newLandmarks, newLandmarksCov);
+    // std::cout << "addedlmk" << std::endl;
+    // setLandmarks(newLandmarks);
+    // std::cout << "camsize  " << measurement.camCoordinates.size() << "filterstate size: " << filterState.X.id.size() << std::endl;
 }
+
+VisionMeasurement VIOFilter::processAndAddNewLandmarks(VisionMeasurement measurement) {
+    //collect all the depth measurement
+    std::vector<double> depthMeasurements; 
+    VisionMeasurement processedMeasurements = measurement;
+    
+    int lmk_removed = 0;
+    for (const pair<const int, Vector2d>& cc : processedMeasurements.camCoordinates) {
+        
+        const int& ccId = cc.first;
+        if (none_of(filterState.X.id.begin(), filterState.X.id.end(), [&ccId](const int& i) { return i == ccId; })) {
+            if(processedMeasurements.depthValue.find(ccId) != processedMeasurements.depthValue.end()) {
+                //unit of depth is mm
+                double depth = processedMeasurements.depthValue.at(ccId);
+                if (depth == 0.0) {
+                    //remove entries with 0 depth from both cameracoord 
+                    measurement.removeEntryById(ccId); 
+                    lmk_removed++;
+                    // Print added landmark's id and depth
+                    // std::cout << "removed Id: " << ccId  << std::endl;
+                    }
+                }
+            } 
+        }
+    std::cout <<"total landmark depth get: "<< processedMeasurements.depthValue.size() <<" removed: "<< lmk_removed << std::endl;
+    // Then pass it to addNewLandmarks
+    addNewLandmarks(measurement);
+    return measurement;
+}
+
 
 void VIOFilter::removeOldLandmarks(const vector<int>& measurementIds) {
     // Determine which indices have been lost

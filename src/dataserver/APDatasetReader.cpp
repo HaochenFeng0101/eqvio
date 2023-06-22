@@ -91,6 +91,30 @@ std::unique_ptr<StampedImage> APDatasetReader::nextImage() {
     return std::make_unique<StampedImage>(temp);
 }
 
+//read depth img 
+std::unique_ptr<StampedDepthImage> APDatasetReader::nextDepthImage() {
+    if (!DepthFile) {
+        return nullptr;
+    }
+
+    CSVLine depthImageLine = DepthFile.nextLine();
+    std::string nextDepthImageFname;
+    double rawStamp;
+    depthImageLine >> rawStamp >> nextDepthImageFname;
+    nextDepthImageFname = depth_dir + "data/" + nextDepthImageFname;
+
+    if (*nextDepthImageFname.rbegin() == '\r') {
+        nextDepthImageFname.erase(nextDepthImageFname.end() - 1);
+    }
+
+    StampedDepthImage temp;
+    temp.stamp = 1e-9 * rawStamp - cameraLag;
+    // Assuming depth image is a grayscale image, 
+    // use the imread function with the IMREAD_GRAYSCALE flag
+    temp.depthImage = cv::imread(nextDepthImageFname); //, cv::IMREAD_GRAYSCALE
+    return std::make_unique<StampedDepthImage>(temp);
+}
+
 std::vector<StampedPose> APDatasetReader::groundtruth() {
     // Find the poses file
     assert(std::filesystem::exists(groundtruthFileName));

@@ -26,7 +26,7 @@
 #include "yaml-cpp/yaml.h"
 
 /** @brief The possible measurement types encountered in a VIO dataset */
-enum class MeasurementType { Image, IMU, None };
+enum class MeasurementType { Image, IMU, None , DepthImage};
 
 /** @brief A struct carrying an openCV image and a timestamp */
 struct StampedImage {
@@ -51,6 +51,12 @@ class DatasetReaderBase {
      * @return a pointer to the next image data in the dataset. The pointer is null if no data remains
      */
     virtual std::unique_ptr<StampedImage> nextImage() = 0;
+
+    /** @brief get the next depth image data.
+     *
+     * @return a pointer to the next depth image data in the dataset. The pointer is null if no data remains
+     */
+    virtual std::unique_ptr<StampedDepthImage> nextDepthImage() = 0;
 
     /** @brief get the next IMU data.
      *

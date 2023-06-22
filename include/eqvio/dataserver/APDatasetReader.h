@@ -30,13 +30,16 @@ class APDatasetReader : public DatasetReaderBase {
   protected:
     std::string groundtruthFileName; ///< The file containing groundtruth data
     std::string cam_dir;             ///< The directory where camera images are stored.
+    std::string depth_dir;
     CSVFile IMUCSVFile;              ///< The CSV file containing IMU velocities
     CSVFile ImageCSVFile;            ///< The CSV file containing image stamps and relative file names.
-
+    CSVFile DepthFile;               //add depth file name
   public:
     virtual std::unique_ptr<StampedImage> nextImage() override;
     virtual std::unique_ptr<IMUVelocity> nextIMU() override;
     virtual std::vector<StampedPose> groundtruth() override;
+    // Declare the nextDepthImage method
+    std::unique_ptr<StampedDepthImage> nextDepthImage();
 
     APDatasetReader() = default;
 

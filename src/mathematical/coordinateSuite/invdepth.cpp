@@ -24,6 +24,7 @@ using namespace liepp;
 Eigen::MatrixXd EqFStateMatrixA_invdepth(const VIOGroup& X, const VIOState& xi0, const IMUVelocity& imuVel);
 Eigen::MatrixXd EqFInputMatrixB_invdepth(const VIOGroup& X, const VIOState& xi0);
 Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_invdepth(
+    //need to be 3d as well
     const Vector3d& q0, const SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y);
 
 VIOAlgebra liftInnovation_invdepth(const Eigen::VectorXd& totalInnovation, const VIOState& xi0);
@@ -251,6 +252,7 @@ VIOGroup liftInnovationDiscrete_invdepth(const Eigen::VectorXd& totalInnovation,
 
     return lift;
 }
+//modify to 3d
 
 Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_invdepth(
     const Vector3d& q0, const SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y) {

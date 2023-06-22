@@ -54,6 +54,7 @@ const Eigen::MatrixXd EqFCoordinateSuite::outputMatrixC(
     const int M = xi0.cameraLandmarks.size();
     const vector<int> ids = y.getIds();
     const int N = ids.size();
+    //modify to 3
     MatrixXd CStar = MatrixXd::Zero(2 * N, VIOSensorState::CompDim + Landmark::CompDim * M);
 
     const VisionMeasurement yHat = measureSystemState(stateGroupAction(X, xi0), y.cameraPtr);
@@ -74,6 +75,9 @@ const Eigen::MatrixXd EqFCoordinateSuite::outputMatrixC(
             CStar.block<2, 3>(2 * j, VIOSensorState::CompDim + 3 * i) =
                 useEquivariance ? outputMatrixCiStar(qi0, X.Q[k], y.cameraPtr, y.camCoordinates.at(idNum))
                                 : outputMatrixCi(qi0, X.Q[k], y.cameraPtr);
+            // CStar.block<2, 3>(2 * j, VIOSensorState::CompDim + 3 * i) =
+            //     useEquivariance ? outputMatrixCiStar(qi0, X.Q[k], y.cameraPtr, y.camCoordinates.at(idNum))
+            //                     : outputMatrixCi(qi0, X.Q[k], y.cameraPtr);
         }
     }
 
@@ -87,3 +91,10 @@ const Eigen::Matrix<double, 2, 3> EqFCoordinateSuite::outputMatrixCi(
     const Vector2d yHat = camPtr->projectPoint(qHat);
     return outputMatrixCiStar(q0, QHat, camPtr, yHat);
 }
+
+// const Eigen::Matrix<double, 2, 3> EqFCoordinateSuite::outputMatrixCi(
+//     const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const GIFT::GICameraPtr& camPtr) const {
+//     const Vector3d qHat = QHat.inverse() * q0;
+//     const Vector2d yHat = camPtr->projectPoint(qHat);
+//     return outputMatrixCiStar(q0, QHat, camPtr, yHat);
+// }

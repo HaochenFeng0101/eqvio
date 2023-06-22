@@ -60,7 +60,11 @@ class VIOFilter {
      * added to the state from those features. Depending on the chosen settings, these landmarks are initialised with
      * either the median scene depth or a fixed depth value.
      */
-    void addNewLandmarks(const VisionMeasurement& measurement);
+    void addNewLandmarks(const VisionMeasurement& measurement); //remove const
+
+
+    //add this function
+    VisionMeasurement processAndAddNewLandmarks(VisionMeasurement measurement);
 
     /** @brief Removes all landmarks with id numbers that do not appear in measurementIds
      *

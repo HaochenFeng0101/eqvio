@@ -18,6 +18,7 @@
 #include "eqvio/dataserver/ASLDatasetReader.h"
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
+#include <iostream>
 
 // // Add two new data members in the class definition.
 // CSVFile depthCSVFile;
@@ -31,10 +32,17 @@ ASLDatasetReader::ASLDatasetReader(const std::string& datasetMainDir) {
     IMUCSVFile = CSVFile(datasetMainDir + "mav0/imu0/" + "data.csv");
     IMUCSVFile.nextLine(); // skip the header
 
+    
+
     // Read the image data file
     cam_dir = datasetMainDir + "mav0/cam0/";
     ImageCSVFile = CSVFile(cam_dir + "data.csv");
     ImageCSVFile.nextLine(); // skip the header
+
+    //depth
+    depth_dir = datasetMainDir + "mav0/depth/";
+    DepthCSVFile = CSVFile(datasetMainDir + "mav0/depth/" + "data.csv");
+    DepthCSVFile.nextLine();
 
     // Get the ground truth
     groundtruthFileName = datasetMainDir + "mav0/state_groundtruth_estimate0/data.csv";
@@ -79,11 +87,11 @@ std::unique_ptr<StampedImage> ASLDatasetReader::nextImage() {
 
 //read depth img 
 std::unique_ptr<StampedDepthImage> ASLDatasetReader::nextDepthImage() {
-    if (!DepthFile) {
+    if (!DepthCSVFile) {
         return nullptr;
     }
 
-    CSVLine depthImageLine = DepthFile.nextLine();
+    CSVLine depthImageLine = DepthCSVFile.nextLine();
     std::string nextDepthImageFname;
     double rawStamp;
     depthImageLine >> rawStamp >> nextDepthImageFname;
@@ -96,8 +104,13 @@ std::unique_ptr<StampedDepthImage> ASLDatasetReader::nextDepthImage() {
     StampedDepthImage temp;
     temp.stamp = 1e-9 * rawStamp - cameraLag;
     // Assuming depth image is a grayscale image, 
-    // we use the imread function with the IMREAD_GRAYSCALE flag
-    temp.depthImage = cv::imread(nextDepthImageFname, cv::IMREAD_GRAYSCALE);
+    // use the imread function with the IMREAD_GRAYSCALE flag
+    temp.depthImage = cv::imread(nextDepthImageFname, cv::IMREAD_UNCHANGED); //, cv::IMREAD_GRAYSCALE
+    // Ensure depth_image is 16-bit unsigned single-channel image
+    assert(temp.depthImage.type() == CV_16UC1);
+
+    // Debug print statement
+    // std::cout << "Read depth image with timestamp: " << temp.depthImage << std::endl;
     return std::make_unique<StampedDepthImage>(temp);
 }
 

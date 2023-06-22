@@ -34,10 +34,17 @@
  */
 struct VisionMeasurement {
     double stamp;                                  ///< The time stamp of the image features.
+    //change to vector3d
     std::map<int, Eigen::Vector2d> camCoordinates; ///< The pixel coordinates of the features, by id number.
+    std::map<int, double> depthValue; ///< The pixel coordinates of the features, by id number.
+
     GIFT::GICameraPtr cameraPtr; ///< A pointer to the camera model associated with the image features.
 
     constexpr static int CompDim = Eigen::Dynamic; ///< The dimension of the space of feature measurements.
+
+    //add a function to remove entry with 0 depth
+    // void removeEntryByindex(const int& idx)
+    void removeEntryById(const int& id);
 
     /** @brief get the id numbers associated with this measurement.
      *
@@ -54,11 +61,20 @@ struct VisionMeasurement {
      */
     operator Eigen::VectorXd() const;
 
+    // /** @brief cast the feature coordinates to OpenCV Point2f
+    //  *
+    //  * @return The map of camera coordinates as Point2f
+    //  */
+    // std::map<int, cv::Point2f> ocvCoordinates() const;
+
+    //need this
     /** @brief cast the feature coordinates to OpenCV Point2f
      *
      * @return The map of camera coordinates as Point2f
      */
     std::map<int, cv::Point2f> ocvCoordinates() const;
+    
+
 };
 
 /** @brief Compute the difference between two vision measurements

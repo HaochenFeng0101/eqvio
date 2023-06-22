@@ -159,6 +159,7 @@ Eigen::MatrixXd EqFStateMatrixA_euclid(const VIOGroup& X, const VIOState& xi0, c
     return A0t;
 }
 
+//modify to 3d
 Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_euclid(
     const Vector3d& q0, const SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y) {
     const Vector3d qHat = QHat.inverse() * q0;

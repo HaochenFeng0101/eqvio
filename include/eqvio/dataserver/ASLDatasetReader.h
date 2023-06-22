@@ -32,7 +32,7 @@ class ASLDatasetReader : public DatasetReaderBase {
     std::string depth_dir;
     CSVFile IMUCSVFile;              ///< The CSV file containing IMU velocities
     CSVFile ImageCSVFile;            ///< The CSV file containing image stamps and relative file names.
-    CSVFile DepthFile;               //add depth file name
+    CSVFile DepthCSVFile;               //add depth file name
 
   public:
     virtual std::unique_ptr<StampedImage> nextImage() override;

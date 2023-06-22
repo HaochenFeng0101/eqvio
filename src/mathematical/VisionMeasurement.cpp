@@ -35,6 +35,29 @@ std::map<int, cv::Point2f> VisionMeasurement::ocvCoordinates() const {
     return ocvPoints;
 }
 
+
+// void VIO_eqf::removeLandmarkByIndex(const int& idx) {
+//     xi0.cameraLandmarks.erase(xi0.cameraLandmarks.begin() + idx);
+//     X.id.erase(X.id.begin() + idx);
+//     X.Q.erase(X.Q.begin() + idx);
+//     removeRows(Sigma, VIOSensorState::CompDim + 3 * idx, 3);
+//     removeCols(Sigma, VIOSensorState::CompDim + 3 * idx, 3);
+// }
+
+// void VIO_eqf::removeLandmarkById(const int& id) {
+//     const auto it = find_if(
+//         xi0.cameraLandmarks.begin(), xi0.cameraLandmarks.end(), [&id](const Landmark& lm) { return lm.id == id; });
+//     assert(it != xi0.cameraLandmarks.end());
+//     const int idx = distance(xi0.cameraLandmarks.begin(), it);
+//     removeLandmarkByIndex(idx);
+// }
+
+//usde to remove measurement pairs with 0 depth
+void VisionMeasurement::removeEntryById(const int& id) {
+    camCoordinates.erase(id);
+    depthValue.erase(id);
+}
+
 CSVLine& operator>>(CSVLine& line, VisionMeasurement& vision) {
     line >> vision.stamp;
     int numBearings;

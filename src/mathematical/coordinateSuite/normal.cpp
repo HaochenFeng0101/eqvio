@@ -23,6 +23,7 @@ using namespace liepp;
 
 Eigen::MatrixXd EqFStateMatrixA_normal(const VIOGroup& X, const VIOState& xi0, const IMUVelocity& imuVel);
 Eigen::MatrixXd EqFInputMatrixB_normal(const VIOGroup& X, const VIOState& xi0);
+
 Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_normal(
     const Vector3d& q0, const SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y);
 

@@ -43,6 +43,8 @@ struct EqFCoordinateSuite {
     /// The EqF input matrix \f$ B_t \f$
     const std::function<Eigen::MatrixXd(const VIOGroup&, const VIOState&)> inputMatrixB;
     /// The EqF equivariant output matrix block \f$ C^\star_t \f$
+    
+    //modify to 3 by 3
     const std::function<Eigen::Matrix<double, 2, 3>(
         const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y)>
         outputMatrixCiStar;

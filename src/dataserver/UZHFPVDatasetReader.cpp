@@ -63,21 +63,45 @@ std::unique_ptr<StampedImage> UZHFPVDatasetReader::nextImage() {
     }
     StampedImage temp;
 
-    CSVLine imageLine = ImageCSVFile.nextLine();
-    std::string nextImageFname;
-    double rawStamp;
-    int num;
-    imageLine >> num >> rawStamp >> nextImageFname;
+    // CSVLine imageLine = ImageCSVFile.nextLine();
+    // std::string nextImageFname;
+    // double rawStamp;
+    // int num;
+    // imageLine >> num >> rawStamp >> nextImageFname;
 
-    nextImageFname = baseDir + nextImageFname;
-    if (*nextImageFname.rbegin() == '\r') {
-        nextImageFname.erase(nextImageFname.end() - 1);
+    // nextImageFname = baseDir + nextImageFname;
+    // if (*nextImageFname.rbegin() == '\r') {
+    //     nextImageFname.erase(nextImageFname.end() - 1);
+    // }
+
+    // temp.stamp = rawStamp - cameraLag;
+    // temp.image = cv::imread(nextImageFname);
+
+    // return std::make_unique<StampedImage>(temp);
+}
+
+//read depth img 
+std::unique_ptr<StampedDepthImage> UZHFPVDatasetReader::nextDepthImage() {
+    if (!DepthFile) {
+        return nullptr;
     }
 
-    temp.stamp = rawStamp - cameraLag;
-    temp.image = cv::imread(nextImageFname);
+    CSVLine depthImageLine = DepthFile.nextLine();
+    std::string nextDepthImageFname;
+    double rawStamp;
+    depthImageLine >> rawStamp >> nextDepthImageFname;
+    nextDepthImageFname = depth_dir + "data/" + nextDepthImageFname;
 
-    return std::make_unique<StampedImage>(temp);
+    if (*nextDepthImageFname.rbegin() == '\r') {
+        nextDepthImageFname.erase(nextDepthImageFname.end() - 1);
+    }
+
+    StampedDepthImage temp;
+    temp.stamp = 1e-9 * rawStamp - cameraLag;
+    // Assuming depth image is a grayscale image, 
+    // use the imread function with the IMREAD_GRAYSCALE flag
+    temp.depthImage = cv::imread(nextDepthImageFname); //, cv::IMREAD_GRAYSCALE
+    return std::make_unique<StampedDepthImage>(temp);
 }
 
 void UZHFPVDatasetReader::readCamera(const std::string& cameraFileName) {

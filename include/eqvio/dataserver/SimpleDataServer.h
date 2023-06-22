@@ -28,11 +28,13 @@ class SimpleDataServer : public DataServerBase {
   protected:
     std::unique_ptr<StampedImage> nextImageData; ///< The next image measurement
     std::unique_ptr<IMUVelocity> nextIMUData;    ///< The next IMU measurement
+    std::unique_ptr<StampedDepthImage> nextDepthData;
 
   public:
     virtual MeasurementType nextMeasurementType() const override;
     virtual StampedImage getImage() override;
     virtual IMUVelocity getIMU() override;
+    virtual StampedDepthImage getDepthImage() override;
     virtual double nextTime() const override;
 
     /** @brief construct the simple data server from a dataset reader.

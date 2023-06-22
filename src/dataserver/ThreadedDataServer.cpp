@@ -29,13 +29,22 @@ MeasurementType ThreadedDataServer::nextMeasurementType() const {
         return MeasurementType::IMU;
     } else if (!imageQueue.empty() && IMUQueue.empty()) {
         return MeasurementType::Image;
+    } else if (!depthImageQueue.empty() && imageQueue.empty() && IMUQueue.empty()) {
+        return MeasurementType::DepthImage;
     }
+
+    // Otherwise, compare the stamps
+    double imageStamp = imageQueue.empty() ? std::numeric_limits<double>::max() : imageQueue.front().stamp;
+    double imuStamp = IMUQueue.empty() ? std::numeric_limits<double>::max() : IMUQueue.front().stamp;
+    double depthImageStamp = depthImageQueue.empty() ? std::numeric_limits<double>::max() : depthImageQueue.front().stamp;
 
     // Otherwise, compare the stamps
     if (imageQueue.front().stamp <= IMUQueue.front().stamp) {
         return MeasurementType::Image;
-    } else {
+    }else if (imuStamp <= imageStamp && imuStamp <= depthImageStamp) {
         return MeasurementType::IMU;
+    } else {
+        return MeasurementType::DepthImage;
     }
 }
 
@@ -43,6 +52,13 @@ StampedImage ThreadedDataServer::getImage() {
     std::unique_lock lck(ioMutex);
     StampedImage data = imageQueue.front();
     imageQueue.pop();
+    return data;
+}
+
+StampedDepthImage ThreadedDataServer::getDepthImage() {
+    std::unique_lock lck(ioMutex);
+    StampedDepthImage data = depthImageQueue.front();
+    depthImageQueue.pop();
     return data;
 }
 
@@ -96,6 +112,17 @@ void ThreadedDataServer::fillQueues() {
                 }
             }
 
+            //depth 
+            if (depthImageQueue.size() < maxDepthImageQueueSize) {
+                std::unique_ptr<StampedDepthImage> nextDepthImageData = datasetReaderPtr->nextDepthImage();
+                if (nextDepthImageData) {
+                    depthImageQueue.emplace(*nextDepthImageData);
+                } else {
+                    depthImageDataFinished = true;
+                }
+            }
+
+
             if (IMUDataFinished && imageDataFinished) {
                 break;
             }
@@ -107,7 +134,8 @@ void ThreadedDataServer::fillQueues() {
 bool ThreadedDataServer::queuesFilled() const {
     std::unique_lock lck(ioMutex);
     return (IMUDataFinished || IMUQueue.size() == maxIMUQueueSize) &&
-           (imageDataFinished || imageQueue.size() == maxImageQueueSize);
+           (imageDataFinished || imageQueue.size() == maxImageQueueSize)&&
+           (depthImageDataFinished || depthImageQueue.size() == maxDepthImageQueueSize);
 }
 
 ThreadedDataServer::~ThreadedDataServer() {

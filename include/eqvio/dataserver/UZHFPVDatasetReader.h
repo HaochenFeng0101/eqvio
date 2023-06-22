@@ -30,13 +30,18 @@ class UZHFPVDatasetReader : public DatasetReaderBase {
     std::string baseDir;  ///< The base directory of the dataset.
     CSVFile IMUCSVFile;   ///< The CSV file containing IMU velocities
     CSVFile ImageCSVFile; ///< The CSV file containing image stamps and relative file names.
-
+    CSVFile DepthFile;               //add depth file name
+    std::string cam_dir;             ///< The directory where camera images are stored.
+    std::string depth_dir;
+    
   public:
     virtual std::unique_ptr<StampedImage> nextImage() override;
     virtual std::unique_ptr<IMUVelocity> nextIMU() override;
     virtual void readCamera(const std::string& cameraFileName) override;
     virtual std::vector<StampedPose> groundtruth() override;
-
+    // Declare the nextDepthImage method
+    std::unique_ptr<StampedDepthImage> nextDepthImage();
+    
     /** @brief Construct the ASL dataset reader from the given dataset directory and simulation settings. */
     UZHFPVDatasetReader(const std::string& datasetFileName);
 };

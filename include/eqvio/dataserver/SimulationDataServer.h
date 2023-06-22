@@ -40,6 +40,7 @@ class SimulationDataServer : public DataServerBase {
     virtual MeasurementType nextMeasurementType() const override;
     virtual StampedImage getImage() override;
     virtual IMUVelocity getIMU() override;
+    virtual StampedDepthImage getDepthImage() override;
     virtual double nextTime() const override;
 
     virtual VisionMeasurement getSimVision() override;

@@ -49,10 +49,15 @@ class DataServerBase {
     virtual MeasurementType nextMeasurementType() const = 0;
     /** @brief Get the next image data. */
     virtual StampedImage getImage() = 0;
+
     /** @brief Get the next IMU data. */
     virtual IMUVelocity getIMU() = 0;
     /** @brief Get the timestamp of the next data, IMU or image.*/
     virtual double nextTime() const = 0;
+    
+    //add this 
+    /** @brief Get depth data*/
+    virtual StampedDepthImage getDepthImage() = 0;
 
     /** @brief get a simulated vision measurement at the time of the next real image data.*/
     virtual VisionMeasurement getSimVision();

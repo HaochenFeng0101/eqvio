@@ -40,7 +40,7 @@
 
 #include "eqvio/VIOVisualiser.h"
 
-VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp);
+VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp, const cv::Mat& depthImage);
 
 int main(int argc, char const* argv[]) {
     // TODO: Add options for writing state and images
@@ -56,6 +56,11 @@ int main(int argc, char const* argv[]) {
         }
         throw std::invalid_argument("Invalid mode requested.");
     });
+    program.add_argument("--depthFlag")
+        .help("measure depth or not")
+        .default_value(false)
+        .implicit_value(true);
+
     program.add_argument("--simvis")
         .help("Simulate the vision measurements from ground truth.")
         .default_value(false)
@@ -106,6 +111,14 @@ int main(int argc, char const* argv[]) {
     const bool simvisFlag = program.get<bool>("--simvis");
     const bool simimuFlag = program.get<bool>("--simimu");
     const bool writeTimeFlag = program.get<bool>("--timing");
+    const bool depthFlag = program.get<bool>("--depthFlag");
+    
+    if (depthFlag) {
+    std::cout << "Using depth" << std::endl;
+
+    } else {
+        std::cout << "Not using depth" << std::endl;
+    }
 
     std::unique_ptr<DataServerBase> dataServer;
     dataServer = std::make_unique<ThreadedDataServer>(
@@ -116,6 +129,7 @@ int main(int argc, char const* argv[]) {
         dataServer->readCamera(program.get<std::string>("--camera"));
     }
 
+    
     // Set up the timer.
     loopTimer.initialise(
         {"correction", "features", "preprocessing", "propagation", "total", "total vision update", "write output"});
@@ -166,13 +180,21 @@ int main(int argc, char const* argv[]) {
                 << std::endl;
         }
     } else {
-        outputFileNameStream << "EQVIO_output_" << std::put_time(std::localtime(&t0), "%F_%T") << "/";
+        if (depthFlag)
+        {
+            outputFileNameStream << "EQVIO_depthoutput_" << std::put_time(std::localtime(&t0), "%F_%T") << "/";
+        }else{
+            outputFileNameStream << "EQVIO_output_" << std::put_time(std::localtime(&t0), "%F_%T") << "/";
+        }
     }
     VIOWriter vioWriter(outputFileNameStream.str());
 
     int imuDataCounter = 0, visionDataCounter = 0;
     const std::chrono::steady_clock::time_point loopStartTime = std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point rateLimitTimer = std::chrono::steady_clock::now();
+
+    // Add a new variable to store the latest depth image
+    cv::Mat latestDepthImage;
 
     while (true) {
         MeasurementType measType = dataServer->nextMeasurementType();
@@ -182,7 +204,24 @@ int main(int argc, char const* argv[]) {
             break;
         }
 
-        if (measType == MeasurementType::Image) {
+
+        if (measType == MeasurementType::DepthImage) {
+            // Process depth image 
+            StampedDepthImage imageDepth;
+            imageDepth = dataServer->getDepthImage();
+
+            //record current depth image
+            latestDepthImage = imageDepth.depthImage;
+            // int latest_depth = latestDepthImage.depth();
+
+            if (startTime > 0 && imageDepth.stamp < startTime) {
+                continue;
+            }
+            
+            std::cout << "Read depth image with timestamp: " << imageDepth.stamp << std::endl;
+            // std::cout << "Read depth image with depth: " << latestDepthImage << std::endl;
+        }   
+        else if (measType == MeasurementType::Image) {
             loopTimer.startLoop();
 
             StampedImage imageData;
@@ -204,7 +243,8 @@ int main(int argc, char const* argv[]) {
                 const VisionMeasurement& featurePrediction =
                     filter.getFeaturePredictions(dataServer->camera(), imageData.stamp);
                 featureTracker.processImage(imageData.image, featurePrediction.ocvCoordinates());
-                measData = convertGIFTFeatures(featureTracker.outputFeatures(), imageData.stamp);
+                // measData = convertGIFTFeatures(featureTracker.outputFeatures(), imageData.stamp);
+                measData = convertGIFTFeatures(featureTracker.outputFeatures(), imageData.stamp, latestDepthImage);
                 measData.cameraPtr = dataServer->camera();
                 loopTimer.endTiming("features");
             }
@@ -260,6 +300,7 @@ int main(int argc, char const* argv[]) {
 
             filter.processIMUData(imuData);
             ++imuDataCounter;
+
         }
 
         if (stopTime > 0 && filter.getTime() > stopTime) {
@@ -275,12 +316,31 @@ int main(int argc, char const* argv[]) {
     return 0;
 }
 
-VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp) {
+// VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp) {
+VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp, const cv::Mat& depthImage) {
     VisionMeasurement measurement;
     measurement.stamp = stamp;
-    std::transform(
-        GIFTFeatures.begin(), GIFTFeatures.end(),
-        std::inserter(measurement.camCoordinates, measurement.camCoordinates.begin()),
-        [](const GIFT::Feature& f) { return std::make_pair(f.idNumber, f.camCoordinatesEigen()); });
+
+    for (const GIFT::Feature& f : GIFTFeatures) {
+    // Get the feature's image coordinates
+    cv::Point2f pt = f.camCoordinates;
+    // Check if the point is within the depth image
+    if (pt.x >= 0 && pt.x < depthImage.cols && pt.y >= 0 && pt.y < depthImage.rows) {
+        // Round and convert coordinates to integer
+        int x = static_cast<int>(std::round(pt.x));
+        int y = static_cast<int>(std::round(pt.y));
+        // Get the depth at the feature's image coordinates
+        uint16_t depthInMillimeters = depthImage.at<uint16_t>(y, x);
+        float depthInMeters = static_cast<float>(depthInMillimeters) / 1000.0f; // adjust the scaling factor as necessary
+
+        // Add the feature to the measurement, including its depth
+        measurement.camCoordinates[f.idNumber] = Eigen::Vector2d(f.camCoordinatesEigen().x(), f.camCoordinatesEigen().y());
+        measurement.depthValue[f.idNumber] = depthInMeters;
+        // std::cout << "depth is " << depthInMeters << std::endl;
+        // std::cout << "Depth image type: " << depthImage.type() << std::endl;
+
+    }
+    }
     return measurement;
+
 }

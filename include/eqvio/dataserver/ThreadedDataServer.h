@@ -35,6 +35,7 @@
 class ThreadedDataServer : public DataServerBase {
   protected:
     const size_t maxImageQueueSize = 200; ///< The maximum image data buffer size
+    const size_t maxDepthImageQueueSize = 200;
     const size_t maxIMUQueueSize = 2000;  ///< The maximum IMU data buffer size
 
     mutable std::condition_variable queuesReady_cv; ///< A CV that is triggered when image and IMU data is ready.
@@ -44,9 +45,11 @@ class ThreadedDataServer : public DataServerBase {
 
     bool IMUDataFinished = false;   ///< A flag that is false so long more IMU data remains to be read.
     bool imageDataFinished = false; ///< A flag that is false so long more image data remains to be read.
+    bool depthImageDataFinished = false;
 
     std::queue<IMUVelocity> IMUQueue;    ///< The buffer of IMU data.
     std::queue<StampedImage> imageQueue; ///< The buffer of image data.
+    std::queue<StampedDepthImage> depthImageQueue;
 
     /** @brief Return true if the queues are at their maximum size or the data is finished.*/
     bool queuesFilled() const;
@@ -71,5 +74,8 @@ class ThreadedDataServer : public DataServerBase {
     virtual MeasurementType nextMeasurementType() const override;
     virtual StampedImage getImage() override;
     virtual IMUVelocity getIMU() override;
+    //add depth
+    virtual StampedDepthImage getDepthImage() override;
+
     virtual double nextTime() const override;
 };

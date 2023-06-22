@@ -266,6 +266,7 @@ Eigen::Matrix<double, 2, 3> e3ProjectSphereDiff(const Eigen::Vector3d& eta) {
     return Diff;
 }
 
+//modify this projection later
 Eigen::Matrix<double, 3, 2> e3ProjectSphereInvDiff(const Eigen::Vector2d& y) {
     Eigen::Matrix<double, 3, 2> Diff;
     Diff.block<2, 2>(0, 0) = Matrix2d::Identity() * (y.squaredNorm() + 1.0) - 2 * y * y.transpose();
@@ -289,6 +290,7 @@ Eigen::Vector2d sphereChart_stereo_impl(const Eigen::Vector3d& eta, const Eigen:
     return e3ProjectSphere(etaRotated);
 }
 
+//modify to 3d change later
 Eigen::Vector3d sphereChart_stereo_inv_impl(const Eigen::Vector2d& y, const Eigen::Vector3d& pole) {
     const Vector3d etaRotated = e3ProjectSphereInv(y);
     const SO3d sphereRot = SO3d::SO3FromVectors(-pole, Eigen::Vector3d::Unit(2));

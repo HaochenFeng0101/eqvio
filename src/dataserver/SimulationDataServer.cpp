@@ -202,6 +202,8 @@ std::shared_ptr<liepp::SE3d> SimulationDataServer::cameraExtrinsics() const {
 StampedImage SimulationDataServer::getImage() { throw std::runtime_error("Cannot request images from the simulator."); }
 
 IMUVelocity SimulationDataServer::getIMU() { return getSimIMU(); }
+StampedDepthImage SimulationDataServer:: getDepthImage() {throw std::runtime_error("not used");}
+
 
 double SimulationDataServer::nextTime() const {
     const double nextMeasTime = std::min(nextImageTime(), nextIMUTime());

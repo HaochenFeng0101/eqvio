@@ -47,6 +47,22 @@ IMUVelocity DataServerBase::getSimIMU() {
     return simulator.getIMU(imu.stamp);
 }
 
+StampedDepthImage DataServerBase::getDepthImage() {
+    // Retrieve the next depth image from the dataset reader
+    // const StampedDepthImage depthimage = getDepthImage()
+    
+    std::unique_ptr<StampedDepthImage> depthImagePtr = datasetReaderPtr->nextDepthImage();
+
+    // If there is no more depth image data, return an empty StampedDepthImage
+    if (!depthImagePtr) {
+        return StampedDepthImage();
+    }
+
+    // Otherwise, return the depth image data
+    return *depthImagePtr;
+}
+
+
 std::shared_ptr<liepp::SE3d> DataServerBase::groundTruthPose(const double stamp) const {
     if (simulator.viewPoses().empty()) {
         return nullptr;
