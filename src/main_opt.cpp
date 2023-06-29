@@ -40,7 +40,8 @@
 
 #include "eqvio/VIOVisualiser.h"
 
-VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp, const cv::Mat& depthImage);
+VisionMeasurement convertGIFTFeaturesRGBD(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp, const cv::Mat& depthImage);
+VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp);
 
 int main(int argc, char const* argv[]) {
     // TODO: Add options for writing state and images
@@ -151,6 +152,7 @@ int main(int argc, char const* argv[]) {
     }
     VIOVisualiser visualiser(displayFlag);
 
+    
     // Initialise the filter
     VIOFilter::Settings filterSettings(eqvioConfig["eqf"]);
     if (dataServer->cameraExtrinsics()) {
@@ -189,6 +191,7 @@ int main(int argc, char const* argv[]) {
     }
     VIOWriter vioWriter(outputFileNameStream.str());
 
+    
     int imuDataCounter = 0, visionDataCounter = 0;
     const std::chrono::steady_clock::time_point loopStartTime = std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point rateLimitTimer = std::chrono::steady_clock::now();
@@ -243,14 +246,27 @@ int main(int argc, char const* argv[]) {
                 const VisionMeasurement& featurePrediction =
                     filter.getFeaturePredictions(dataServer->camera(), imageData.stamp);
                 featureTracker.processImage(imageData.image, featurePrediction.ocvCoordinates());
-                // measData = convertGIFTFeatures(featureTracker.outputFeatures(), imageData.stamp);
-                measData = convertGIFTFeatures(featureTracker.outputFeatures(), imageData.stamp, latestDepthImage);
+                //use depth flag to process feature for rgbd and rgb differently
+                if(depthFlag){
+                    measData = convertGIFTFeaturesRGBD(featureTracker.outputFeatures(), imageData.stamp, latestDepthImage);
+                }else{
+                    measData = convertGIFTFeatures(featureTracker.outputFeatures(), imageData.stamp);
+                }
+                
+                
                 measData.cameraPtr = dataServer->camera();
                 loopTimer.endTiming("features");
             }
 
             loopTimer.startTiming("total vision update");
-            filter.processVisionData(measData);
+            //process data differently depend on depthflag
+            if (depthFlag){
+                filter.processVisionDataRGBD(measData);
+            }else{
+                filter.processVisionDataRGB(measData);
+            }
+            
+
             loopTimer.endTiming("total vision update");
             loopTimer.endTiming("total");
             ++visionDataCounter;
@@ -315,9 +331,10 @@ int main(int argc, char const* argv[]) {
 
     return 0;
 }
+ 
 
 // VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp) {
-VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp, const cv::Mat& depthImage) {
+VisionMeasurement convertGIFTFeaturesRGBD(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp, const cv::Mat& depthImage) {
     VisionMeasurement measurement;
     measurement.stamp = stamp;
 
@@ -343,4 +360,14 @@ VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeat
     }
     return measurement;
 
+}
+
+VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp) {
+    VisionMeasurement measurement;
+    measurement.stamp = stamp;
+    std::transform(
+        GIFTFeatures.begin(), GIFTFeatures.end(),
+        std::inserter(measurement.camCoordinates, measurement.camCoordinates.begin()),
+        [](const GIFT::Feature& f) { return std::make_pair(f.idNumber, f.camCoordinatesEigen()); });
+    return measurement;
 }

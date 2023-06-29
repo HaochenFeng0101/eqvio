@@ -60,12 +60,18 @@ class VIOFilter {
      * added to the state from those features. Depending on the chosen settings, these landmarks are initialised with
      * either the median scene depth or a fixed depth value.
      */
-    void addNewLandmarks(const VisionMeasurement& measurement); //remove const
+    void addNewLandmarksRGBD(const VisionMeasurement& measurement); 
+
+
+    void addNewLandmarksRGB(const VisionMeasurement& measurement); 
 
 
     //add this function
-    VisionMeasurement processAndAddNewLandmarks(VisionMeasurement measurement);
-
+    //process incoming measurement kick out 0 depth
+    VisionMeasurement processAndAddNewLandmarksRGBD(VisionMeasurement measurement);
+    //process current lmks, kick out that has 0 depth
+    void checkLandmarksRGBD(VisionMeasurement& measurement);
+    
     /** @brief Removes all landmarks with id numbers that do not appear in measurementIds
      *
      * @param measurementIds The ids of landmarks that will be kept.
@@ -152,8 +158,8 @@ class VIOFilter {
      * successfully, or those that are associated with outlier measurements, are removed from the EqF state. Third and
      * final, the EqF correction terms are computed and applied.
      */
-    void processVisionData(const VisionMeasurement& measurement);
-
+    void processVisionDataRGBD(const VisionMeasurement& measurement);
+    void processVisionDataRGB(const VisionMeasurement& measurement);
     //-------------------------
     // Output
     //-------------------------

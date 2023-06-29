@@ -52,10 +52,17 @@ std::map<int, cv::Point2f> VisionMeasurement::ocvCoordinates() const {
 //     removeLandmarkByIndex(idx);
 // }
 
-//usde to remove measurement pairs with 0 depth
+// Used to remove measurement pairs with a specific id
 void VisionMeasurement::removeEntryById(const int& id) {
-    camCoordinates.erase(id);
-    depthValue.erase(id);
+    // Erase the entry with id from camCoordinates
+    auto it_cam = camCoordinates.find(id);
+    if (it_cam != camCoordinates.end())
+        camCoordinates.erase(it_cam);
+
+    // Erase the entry with id from depthValue
+    auto it_depth = depthValue.find(id);
+    if (it_depth != depthValue.end())
+        depthValue.erase(it_depth);
 }
 
 CSVLine& operator>>(CSVLine& line, VisionMeasurement& vision) {

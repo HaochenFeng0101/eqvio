@@ -23,6 +23,7 @@
 #include "eqvio/VIOFilter.h"
 #include "eqvio/VIOFilterSettings.h"
 #include "eqvio/mathematical/EqFMatrices.h"
+#include <iomanip>
 
 using namespace Eigen;
 using namespace std;
@@ -191,7 +192,8 @@ bool VIOFilter::integrateUpToTime(const double& newTime) {
     return true;
 }
 
-void VIOFilter::processVisionData(const VisionMeasurement& measurement) {
+//RGB process data
+void VIOFilter::processVisionDataRGB(const VisionMeasurement& measurement) {
     // Use the stored velocity input to bring the filter up to the current timestamp
     loopTimer.startTiming("propagation");
     bool integrationFlag = integrateUpToTime(measurement.stamp);
@@ -210,11 +212,61 @@ void VIOFilter::processVisionData(const VisionMeasurement& measurement) {
 
     VisionMeasurement matchedMeasurement = measurement;
     removeOutliers(matchedMeasurement);
-    matchedMeasurement = processAndAddNewLandmarks(matchedMeasurement);
+    addNewLandmarksRGB(matchedMeasurement);
+
+    if (settings->removeLostLandmarks) {
+        assert(matchedMeasurement.camCoordinates.size() == filterState.X.id.size());
+        for (int i = filterState.X.id.size() - 1; i >= 0; --i) {
+            assert(matchedMeasurement.camCoordinates.count(filterState.X.id[i]) > 0);
+        }
+    }
+    loopTimer.endTiming("preprocessing");
+
+    if (matchedMeasurement.camCoordinates.empty())
+        return;
+
+    // --------------------------
+    // Compute the EqF innovation
+    // --------------------------
+    loopTimer.startTiming("correction");
+
+    filterState.performVisionUpdate(
+        matchedMeasurement, settings->constructOutputGainMatrix(matchedMeasurement.camCoordinates.size()),
+        settings->useEquivariantOutput, settings->useDiscreteInnovationLift);
+
+    filterState.removeInvalidLandmarks();
+    loopTimer.endTiming("correction");
+
+    assert(!filterState.Sigma.hasNaN());
+    assert(!filterState.X.hasNaN());
+    // assert(filterState.Sigma.eigenvalues().real().minCoeff() > 0);
+}
+
+//RGBD process data
+void VIOFilter::processVisionDataRGBD(const VisionMeasurement& measurement) {
+    // Use the stored velocity input to bring the filter up to the current timestamp
+    loopTimer.startTiming("propagation");
+    bool integrationFlag = integrateUpToTime(measurement.stamp);
+    if (!integrationFlag || !initialisedFlag)
+        return;
+    loopTimer.endTiming("propagation");
+
+    loopTimer.startTiming("preprocessing");
+    if (settings->removeLostLandmarks) {
+        removeOldLandmarks(measurement.getIds());
+        assert(measurement.camCoordinates.size() >= filterState.X.id.size());
+        for (int i = filterState.X.id.size() - 1; i >= 0; --i) {
+            assert(measurement.camCoordinates.count(filterState.X.id[i]) > 0);
+        }
+    }
+
+    VisionMeasurement matchedMeasurement = measurement;
+    removeOutliers(matchedMeasurement);
+    // checkLandmarksRGBD(matchedMeasurement);
+    // checkLandmarks(matchedMeasurement, filterState.X);
+    matchedMeasurement = processAndAddNewLandmarksRGBD(matchedMeasurement);
      
     // addNewLandmarks(matchedMeasurement);
-    
-    // std::cout << "matched measurement size" << matchedMeasurement.camCoordinates.size() << "filter size" << filterState.X.id.size() << std::endl;
     
     
     if (settings->removeLostLandmarks) {
@@ -263,7 +315,29 @@ CSVLine& operator<<(CSVLine& line, const VIOFilter& filter) { return line << fil
 double VIOFilter::getTime() const { return filterState.currentTime; }
 
 
-void VIOFilter::addNewLandmarks(const VisionMeasurement& measurement) { //remove the const
+void VIOFilter::addNewLandmarksRGB(const VisionMeasurement& measurement) {
+    // Grab all the new landmarks
+    std::vector<Landmark> newLandmarks;
+    for (const pair<const int, Vector2d>& cc : measurement.camCoordinates) {
+        const int& ccId = cc.first;
+        if (none_of(filterState.X.id.begin(), filterState.X.id.end(), [&ccId](const int& i) { return i == ccId; })) {
+            Vector3d bearing = measurement.cameraPtr->undistortPoint(cc.second);
+            newLandmarks.emplace_back(Landmark{bearing, ccId});
+        }
+    }
+    if (newLandmarks.empty())
+        return;
+
+    // Initialise all landmarks to the median scene depth
+    double initialDepth = settings->useMedianDepth ? getMedianSceneDepth() : settings->initialSceneDepth;
+    for_each(newLandmarks.begin(), newLandmarks.end(), [&initialDepth](Landmark& blm) { blm.p *= initialDepth; });
+    const int newN = newLandmarks.size();
+    const Eigen::MatrixXd newLandmarksCov =
+        Eigen::MatrixXd::Identity(3 * newN, 3 * newN) * settings->initialPointVariance;
+    filterState.addNewLandmarks(newLandmarks, newLandmarksCov);
+}
+
+void VIOFilter::addNewLandmarksRGBD(const VisionMeasurement& measurement) { 
     // Grab all the new landmarks
     std::vector<Landmark> newLandmarks;
     //collect all the depth measurement
@@ -278,21 +352,20 @@ void VIOFilter::addNewLandmarks(const VisionMeasurement& measurement) { //remove
             if(measurement.depthValue.find(ccId) != measurement.depthValue.end()) {
                 //unit of depth is mm
                 double depth = measurement.depthValue.at(ccId);
-                // if (depth == 0.0) {
-                //     // depth = getNonZeroDepthAround(depthImage, static_cast<int>(cc.second(0)), static_cast<int>(cc.second(1)));
-                //     // depth = initialDepth;
-                //     // std::cout << initialDepth << std::endl; 5
-                //     continue;
-                // }
-                // Push back either the original or the estimated depth
-                 // Print added landmark's id and depth 
+                if (depth == 0.0) {
+                    // depth = getNonZeroDepthAround(depthImage, static_cast<int>(cc.second(0)), static_cast<int>(cc.second(1)));
+                    // depth = initialDepth;
+                    // std::cout << initialDepth << std::endl; 5
+                    // std::cout <<"has 0 wrong" <<std::endl;
+                }
+               
                 // std::cout << "read lmk with depth Id: " << ccId << ", Depth: " << depth << std::endl;
                 depthMeasurements.push_back(depth);
             } 
         }
     }
     for (const auto& depthPair : measurement.depthValue) {
-    std::cout << "Id: " << depthPair.first << ", Depth: " << depthPair.second << std::endl;
+    std::cout << "Id: " << depthPair.first << ", Depth: " << std::setprecision(8) << depthPair.second << std::endl;
     }
     std::cout << "Total depth landmarks used: " << measurement.depthValue.size() << std::endl;
 
@@ -325,7 +398,34 @@ void VIOFilter::addNewLandmarks(const VisionMeasurement& measurement) { //remove
     // std::cout << "camsize  " << measurement.camCoordinates.size() << "filterstate size: " << filterState.X.id.size() << std::endl;
 }
 
-VisionMeasurement VIOFilter::processAndAddNewLandmarks(VisionMeasurement measurement) {
+void VIOFilter::checkLandmarksRGBD(VisionMeasurement& measurement) {
+    // Create a vector to store the IDs of the landmarks to remove
+    std::vector<int> idsToRemove;
+
+    // Iterate over the landmarks in filter state
+    for (const int& currentId : filterState.X.id) {
+        // Try to find this ID in the measurement's depthValue map
+        auto it = measurement.depthValue.find(currentId);
+        if (it != measurement.depthValue.end() && it->second == 0) {
+            // If the ID was found and its depth is 0, add the ID to the vector of IDs to remove
+            idsToRemove.push_back(currentId);
+        }
+    }
+    //print to check 
+    // Remove the landmarks with the IDs stored in idsToRemove from filterState.X.id and measurement
+    for (const int& idToRemove : idsToRemove) {
+        std::cout << "Removing landmark with ID: " << idToRemove << " from filter state due to 0 depth." << std::endl;
+        filterState.removeLandmarkById(idToRemove);
+
+        std::cout << "Removing measurement with ID: " << idToRemove << " due to 0 depth." << std::endl;
+        measurement.removeEntryById(idToRemove);
+    }
+}
+
+
+
+
+VisionMeasurement VIOFilter::processAndAddNewLandmarksRGBD(VisionMeasurement measurement) {
     //collect all the depth measurement
     std::vector<double> depthMeasurements; 
     VisionMeasurement processedMeasurements = measurement;
@@ -338,11 +438,12 @@ VisionMeasurement VIOFilter::processAndAddNewLandmarks(VisionMeasurement measure
             if(processedMeasurements.depthValue.find(ccId) != processedMeasurements.depthValue.end()) {
                 //unit of depth is mm
                 double depth = processedMeasurements.depthValue.at(ccId);
-                if (depth == 0.0) {
+                
+                if (depth == 0) {
                     //remove entries with 0 depth from both cameracoord 
                     measurement.removeEntryById(ccId); 
                     lmk_removed++;
-                    // Print added landmark's id and depth
+                    
                     // std::cout << "removed Id: " << ccId  << std::endl;
                     }
                 }
@@ -350,7 +451,7 @@ VisionMeasurement VIOFilter::processAndAddNewLandmarks(VisionMeasurement measure
         }
     std::cout <<"total landmark depth get: "<< processedMeasurements.depthValue.size() <<" removed: "<< lmk_removed << std::endl;
     // Then pass it to addNewLandmarks
-    addNewLandmarks(measurement);
+    addNewLandmarksRGBD(measurement);
     return measurement;
 }
 

@@ -139,7 +139,7 @@ int main(int argc, char const* argv[]) {
             if (!program.get<bool>("--fullState")) {
                 filter.augmentLandmarkStates(measData.getIds(), simDataServer.getTrueState(measData.stamp, true));
             }
-            filter.processVisionData(measData);
+            filter.processVisionDataRGBD(measData);
             ++visionDataCounter;
 
             // Output filter data

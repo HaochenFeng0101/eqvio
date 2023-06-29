@@ -1,9 +1,9 @@
 GIFT:
   equaliseImageHistogram: false
-  featureDist: 45 #46 #46
+  featureDist: 40 #46 #46
   featureSearchThreshold: 1
   maxError: 76.21556706799433
-  maxFeatures: 38 #32 #33
+  maxFeatures: 60 #32 #33
   maxLevel: 3
   minHarrisQuality: 0.0792713927794865
   ransacParams:
@@ -11,33 +11,33 @@ GIFT:
     maxIterations: 38
     minDataPoints: 5
     minInliers: 21
-  trackedFeatureDist: 45 #46
+  trackedFeatureDist: 40 #45
   winSize: 20 #20
 eqf:
   initialValue:
-    sceneDepth: 5 #2.8 
+    sceneDepth: 3.5 #2.8 
   initialVariance:
     attitude: 0.13565029126052572
     biasAcc: 0.5813333765300104
     biasGyr: 1.79515771076
     cameraAttitude: 0.0010228558965517584
     cameraPosition: 0.023501400846134893
-    point: 100 #120
+    point: 120 #120
     position: 0.1
-    velocity: 0.0000006 #8.974852995731e-06
+    velocity: 8.974852995731e-06
   measurementNoise:
     feature: 3
     featureOutlierAbs: 4.852186665580312
     featureOutlierProb: 5.04229809583062128
     featureRetention: 0.18594708334486176
   processVariance:
-    attitude: 6.025875320811407e-03
-    biasAcc: 0.01 #0.001
-    biasGyr: 0.002 #0.01
-    cameraAttitude: 9.075382174045239e-04
-    cameraPosition: 1.2188313140115635e-04
+    attitude: 6e-5 #6.025875320811407e-03
+    biasAcc: 0.0001 #0.001
+    biasGyr: 0.0001 #0.01
+    cameraAttitude: 9.075e-5 #9.075382174045239e-04
+    cameraPosition: 1.21e-05 #1.2188313140115635e-04
     point: 0.0029845436136043135
-    position: 9.981466095928483e-02
+    position: 9e-3 #9.981466095928483e-02
     velocity: 1e-5 #0.02
   settings:
     coordinateChoice: InvDepth
