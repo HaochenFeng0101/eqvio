@@ -54,7 +54,7 @@ const Eigen::MatrixXd EqFCoordinateSuite::outputMatrixC(
     const int M = xi0.cameraLandmarks.size();
     const vector<int> ids = y.getIds();
     const int N = ids.size();
-    //modify to 3
+ 
     MatrixXd CStar = MatrixXd::Zero(2 * N, VIOSensorState::CompDim + Landmark::CompDim * M);
 
     const VisionMeasurement yHat = measureSystemState(stateGroupAction(X, xi0), y.cameraPtr);
