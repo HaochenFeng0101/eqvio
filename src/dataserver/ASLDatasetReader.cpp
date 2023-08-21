@@ -107,7 +107,25 @@ std::unique_ptr<StampedDepthImage> ASLDatasetReader::nextDepthImage() {
     // use the imread function with the IMREAD_GRAYSCALE flag
     temp.depthImage = cv::imread(nextDepthImageFname, cv::IMREAD_UNCHANGED); //, cv::IMREAD_GRAYSCALE
     // Ensure depth_image is 16-bit unsigned single-channel image
-    assert(temp.depthImage.type() == CV_16UC1);
+    // Handle other types
+    
+    // int type = temp.depthImage.type();
+    // if(type == CV_16UC1){
+    //     std::cout << "Image is a 16-bit unsigned single-channel image\n";
+    //     // Add your processing code here
+    // }
+    // else if(type == CV_8UC3){
+    //     std::cout << "Image is a 8-bit unsigned 3-channel image\n";
+    //     // Add your processing code here
+    // }
+    // else if(type == CV_8UC1){
+    //     std::cout << "Image is a 8-bit unsigned single-channel image\n";
+    //     // Add your processing code here
+    // }
+    // // Add as many cases as necessary to handle all the image types you're interested in
+    // else {
+    //     std::cout << "Image type not recognized or not handled in this function\n";
+    // }
 
     // Debug print statement
     // std::cout << "Read depth image with timestamp: " << temp.depthImage << std::endl;

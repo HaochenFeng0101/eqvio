@@ -78,7 +78,7 @@ struct VIOSensorState {
 struct VIOState {
     VIOSensorState sensor;                 ///< The sensor states of the VIO system
     std::vector<Landmark> cameraLandmarks; ///< The landmark positions in the camera frame.
-
+    
     /** @brief get the id numbers of all of the camera landmarks.
      */
     std::vector<int> getIds() const;

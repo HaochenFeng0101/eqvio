@@ -162,6 +162,7 @@ int main(int argc, char const* argv[]) {
     }
     std::cout << "The camera extrinsics (pose of the camera w.r.t. the IMU) are:\n"
               << filterSettings.cameraOffset.asMatrix() << std::endl;
+              
     VIOFilter filter(filterSettings);
     ////////////////////////////////////////////////////////////////////////////////////
     // Initialise the feature tracker
@@ -221,7 +222,7 @@ int main(int argc, char const* argv[]) {
                 continue;
             }
             
-            std::cout << "Read depth image with timestamp: " << imageDepth.stamp << std::endl;
+            // std::cout << "Read depth image with timestamp: " << imageDepth.stamp << std::endl;
             // std::cout << "Read depth image with depth: " << latestDepthImage << std::endl;
         }   
         else if (measType == MeasurementType::Image) {
@@ -278,6 +279,7 @@ int main(int argc, char const* argv[]) {
             // Output filter data
             loopTimer.startTiming("write output");
             VIOState estimatedState = filter.stateEstimate();
+            
             if (writeStateFlag) {
                 vioWriter.writeStates(filter.getTime(), estimatedState);
                 vioWriter.writeFeatures(measData);
@@ -331,36 +333,50 @@ int main(int argc, char const* argv[]) {
 
     return 0;
 }
- 
 
-// VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp) {
+
 VisionMeasurement convertGIFTFeaturesRGBD(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp, const cv::Mat& depthImage) {
     VisionMeasurement measurement;
     measurement.stamp = stamp;
 
     for (const GIFT::Feature& f : GIFTFeatures) {
-    // Get the feature's image coordinates
-    cv::Point2f pt = f.camCoordinates;
-    // Check if the point is within the depth image
-    if (pt.x >= 0 && pt.x < depthImage.cols && pt.y >= 0 && pt.y < depthImage.rows) {
-        // Round and convert coordinates to integer
-        int x = static_cast<int>(std::round(pt.x));
-        int y = static_cast<int>(std::round(pt.y));
-        // Get the depth at the feature's image coordinates
-        uint16_t depthInMillimeters = depthImage.at<uint16_t>(y, x);
-        float depthInMeters = static_cast<float>(depthInMillimeters) / 1000.0f; // adjust the scaling factor as necessary
-
-        // Add the feature to the measurement, including its depth
-        measurement.camCoordinates[f.idNumber] = Eigen::Vector2d(f.camCoordinatesEigen().x(), f.camCoordinatesEigen().y());
-        measurement.depthValue[f.idNumber] = depthInMeters;
-        // std::cout << "depth is " << depthInMeters << std::endl;
-        // std::cout << "Depth image type: " << depthImage.type() << std::endl;
-
-    }
+        // Get the feature's image coordinates
+        cv::Point2f pt = f.camCoordinates;
+        // Check if the point is within the depth image
+        if (pt.x >= 0 && pt.x < depthImage.cols && pt.y >= 0 && pt.y < depthImage.rows) {
+            // Round and convert coordinates to integer
+            int x = static_cast<int>(std::round(pt.x));
+            int y = static_cast<int>(std::round(pt.y));
+            // Get the depth at the feature's image coordinates
+            float depthInMeters = 0.0f;
+            switch (depthImage.type()) {
+                case CV_16UC1: {
+                    uint16_t depthInMillimeters = depthImage.at<uint16_t>(y, x);
+                    depthInMeters = static_cast<float>(depthInMillimeters) / 1000.0f;
+                    break;
+                }
+                case CV_32FC1: {
+                    depthInMeters = depthImage.at<float>(y, x);
+                    break;
+                }
+                case CV_8UC1: {
+                    uint8_t depthInUnits = depthImage.at<uint8_t>(y, x);
+                    depthInMeters = static_cast<float>(depthInUnits) / 255.0f;  // Assume a normalized scale between 0 and 1 meter
+                    break;
+                }
+                default: {
+                    std::cout << "Unsupported depth image type: " << depthImage.type() << std::endl;
+                    break;
+                }
+            }
+            // Add the feature to the measurement, including its depth
+            measurement.camCoordinates[f.idNumber] = Eigen::Vector2d(f.camCoordinatesEigen().x(), f.camCoordinatesEigen().y());
+            measurement.depthValue[f.idNumber] = depthInMeters;
+        }
     }
     return measurement;
-
 }
+
 
 VisionMeasurement convertGIFTFeatures(const std::vector<GIFT::Feature>& GIFTFeatures, const double& stamp) {
     VisionMeasurement measurement;

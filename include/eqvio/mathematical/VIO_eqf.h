@@ -66,7 +66,7 @@ struct VIO_eqf {
     /** @brief Remove all landmarks with depth values that are too small or too large.
      */
     void removeInvalidLandmarks();
-
+    void removeInvalidLandmarksForDepth();
     /** @brief Get the marginalised covariance associated with a landmark by its id number
      *
      * @param id The id number of the landmark with the desired covariance.

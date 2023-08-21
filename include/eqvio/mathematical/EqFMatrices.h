@@ -49,6 +49,11 @@ struct EqFCoordinateSuite {
         const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y)>
         outputMatrixCiStar;
 
+    //define cstar depth
+    const std::function<Eigen::Matrix<double, 1, 3>(
+        const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const double measurement_depth)>
+        outputMatrixCiStarDepth;
+
     /// The output matrix  with equivariance \f$ C_t^\star \f$ or without \f$ C_t \f$.
     const Eigen::MatrixXd outputMatrixC(
         const VIOState& xi0, const VIOGroup& X, const VisionMeasurement& y, const bool useEquivariance = true) const;
@@ -59,6 +64,11 @@ struct EqFCoordinateSuite {
     /// The standard (not equivariant) output matrix block \f$ C_i \f$.
     const Eigen::Matrix<double, 2, 3>
     outputMatrixCi(const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const GIFT::GICameraPtr& camPtr) const;
+
+    //defince ci depth
+    const Eigen::Matrix<double, 1, 3> outputMatrixci_depth(
+    const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const double measurement_depth) const;
+   
 
     /// The continuous-time lift of the correction term \f$ \Delta \f$ from the tangent space at \f$ \mathring{\xi} \f$
     /// to the Lie algebra \f$ \mathfrak{g} \f$.

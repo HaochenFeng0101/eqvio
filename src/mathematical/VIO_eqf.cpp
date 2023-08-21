@@ -23,6 +23,7 @@
 #include "eqvio/mathematical/VIO_eqf.h"
 
 #include "eigen3/unsupported/Eigen/MatrixFunctions"
+#include <iostream>
 
 void removeRows(Eigen::MatrixXd& mat, int startRow, int numRows) {
     int rows = mat.rows();
@@ -107,16 +108,26 @@ void VIO_eqf::performVisionUpdate(
     const bool& discreteCorrection) {
     if (measurement.camCoordinates.empty())
         return;
-
+    
     const VisionMeasurement estimatedMeasurement = measureSystemState(stateEstimate(), measurement.cameraPtr);
     const Eigen::VectorXd yTilde = measurement - estimatedMeasurement;
+    // std::cout << "ytilde: \n"<< yTilde << std::endl;
     const Eigen::MatrixXd Ct = coordinateSuite->outputMatrixC(xi0, X, measurement, useEquivariantOutput);
-
+    // std::cout << "Ct: " << Ct << std::endl;
     // Use the discrete update form
+    // std::cout << "Size of Ct: " << Ct.rows() << "x" << Ct.cols() << std::endl;
+    // std::cout << "Size of Sigma: " << Sigma.rows() << "x" << Sigma.cols() << std::endl;
+    // std::cout << "Size of Ct * Sigma * Ct.transpose(): " << (Ct * Sigma * Ct.transpose()).rows() << "x" << (Ct * Sigma * Ct.transpose()).cols() << std::endl;
+    // std::cout << "Size of outputGainMatrix: " << outputGainMatrix.rows() << "x" << outputGainMatrix.cols() << std::endl;
+
     const auto& SInv = (Ct * Sigma * Ct.transpose() + outputGainMatrix).inverse();
     const auto& K = Sigma * Ct.transpose() * SInv;
-
+    // std::cout << "Size of yTilde: " << yTilde.rows() << std::endl;
+    // std::cout << "Size of SInv: " << SInv.rows() << "x" << SInv.cols() << std::endl;
+    // std::cout << "Size of K: " << K.rows() << "x" << K.cols() << std::endl;
+    
     const Eigen::VectorXd Gamma = K * yTilde;
+    // std::cout << "Size of Gamma: " << Gamma.rows() << "x" << Gamma.cols() << std::endl;
     assert(!Gamma.hasNaN());
 
     VIOGroup Delta;
@@ -213,12 +224,33 @@ Eigen::Matrix2d VIO_eqf::getOutputCovById(
 void VIO_eqf::removeInvalidLandmarks() {
     std::set<int> invalidLandmarkIds;
     for (size_t i = 0; i < X.id.size(); ++i) {
-        if (X.Q[i].a <= 1e-8 || X.Q[i].a > 1e8) {
+        if (X.Q[i].a <= 1e-8 || X.Q[i].a > 1e8 ) {
             invalidLandmarkIds.emplace(X.id[i]);
+            std::cout << "Marking landmark ID " << X.id[i] << " for removal. Q.a: " << X.Q[i].a << std::endl;
         }
     }
     for (const int& lmId : invalidLandmarkIds) {
+        // std::cout << "Removing landmark ID " << lmId << std::endl;
         removeLandmarkById(lmId);
+        std::cout << "removed invalid id from Q:" << lmId <<std::endl;
+    }
+}
+
+void VIO_eqf::removeInvalidLandmarksForDepth() {
+    std::set<int> invalidLandmarkIds;
+    for (size_t i = 0; i < xi0.cameraLandmarks.size(); ++i) {
+        double depth = xi0.cameraLandmarks[i].p.norm();
+        // std::cout << depth << std::endl;
+        if (xi0.cameraLandmarks[i].p.norm() > 15 || depth < 0.001) {
+            
+            invalidLandmarkIds.emplace(i);
+            // std::cout << "Marking landmark index " << i << " for removal. Norm: " << xi0.cameraLandmarks[i].p.norm() << std::endl;
+        }
+    }
+    // Removing in reverse order to prevent issues with changing vector indices
+    for (const int& lmIndex : invalidLandmarkIds) {
+        std::cout << "Removing landmark index " << lmIndex << " due to invalid depth" << std::endl;
+        removeLandmarkById(lmIndex); // Assuming removeLandmarkById takes the index of the landmark to be removed
     }
 }
 

@@ -24,14 +24,17 @@ using namespace liepp;
 Eigen::MatrixXd EqFStateMatrixA_invdepth(const VIOGroup& X, const VIOState& xi0, const IMUVelocity& imuVel);
 Eigen::MatrixXd EqFInputMatrixB_invdepth(const VIOGroup& X, const VIOState& xi0);
 Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_invdepth(
-    //need to be 3d as well
     const Vector3d& q0, const SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y);
+
+Eigen::Matrix<double, 1, 3> EqFoutputMatrixCiStar_depth_invdepth(
+    const Eigen::Vector3d& q0, const SOT3d& QHat, const double measurement_depth);
 
 VIOAlgebra liftInnovation_invdepth(const Eigen::VectorXd& totalInnovation, const VIOState& xi0);
 VIOGroup liftInnovationDiscrete_invdepth(const Eigen::VectorXd& totalInnovation, const VIOState& xi0);
 
 const EqFCoordinateSuite EqFCoordinateSuite_invdepth{VIOChart_invdepth,        EqFStateMatrixA_invdepth,
                                                      EqFInputMatrixB_invdepth, EqFoutputMatrixCiStar_invdepth,
+                                                     EqFoutputMatrixCiStar_depth_invdepth,
                                                      liftInnovation_invdepth,  liftInnovationDiscrete_invdepth};
 
 Eigen::MatrixXd EqFStateMatrixA_invdepth(const VIOGroup& X, const VIOState& xi0, const IMUVelocity& imuVel) {
@@ -252,7 +255,7 @@ VIOGroup liftInnovationDiscrete_invdepth(const Eigen::VectorXd& totalInnovation,
 
     return lift;
 }
-//modify to 3d
+
 
 Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_invdepth(
     const Vector3d& q0, const SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y) {
@@ -265,4 +268,18 @@ Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_invdepth(
 
     Eigen::Matrix<double, 2, 3> C0i = EqFCoordinateSuite_euclid.outputMatrixCiStar(q0, QHat, camPtr, y) * ind2euc;
     return C0i;
+}
+
+Eigen::Matrix<double, 1, 3> EqFoutputMatrixCiStar_depth_invdepth(
+    const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const double measurement_depth) {
+    const double& r0 = q0.norm();
+    const Vector3d& y0 = q0 / r0; //this is q/|q|
+
+    Eigen::Matrix3d ind2euc;
+    ind2euc.block<3, 2>(0, 0) = r0 * sphereChart_stereo.chartInvDiff0(y0);
+    ind2euc.block<3, 1>(0, 2) = -r0 * q0;
+
+
+    Eigen::Matrix<double, 1, 3> C0i_depth = EqFCoordinateSuite_euclid.outputMatrixCiStarDepth(q0,QHat, measurement_depth) * ind2euc;
+    return C0i_depth;
 }

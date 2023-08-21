@@ -27,12 +27,18 @@ Eigen::MatrixXd EqFInputMatrixB_normal(const VIOGroup& X, const VIOState& xi0);
 Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_normal(
     const Vector3d& q0, const SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y);
 
+//add new cistar depth
+Eigen::Matrix<double, 1, 3> EqFoutputMatrixCiStar_depth_normal(
+    //not working
+    const Eigen::Vector3d& q0, const liepp::SOT3d& QHat,  const double measurement_depth);
+
 VIOAlgebra liftInnovation_normal(const Eigen::VectorXd& baseInnovation, const VIOState& xi0);
 VIOAlgebra liftInnovation_normal(const Eigen::VectorXd& totalInnovation, const VIOState& xi0);
 VIOGroup liftInnovationDiscrete_normal(const Eigen::VectorXd& totalInnovation, const VIOState& xi0);
 
 const EqFCoordinateSuite EqFCoordinateSuite_normal{VIOChart_normal,        EqFStateMatrixA_normal,
                                                    EqFInputMatrixB_normal, EqFoutputMatrixCiStar_normal,
+                                                   EqFoutputMatrixCiStar_depth_normal,
                                                    liftInnovation_normal,  liftInnovationDiscrete_normal};
 
 Eigen::MatrixXd EqFStateMatrixA_normal(const VIOGroup& X, const VIOState& xi0, const IMUVelocity& imuVel) {
@@ -64,3 +70,15 @@ Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_normal(
         camPtr->projectionJacobian(yHat) * QHat.R.asMatrix().transpose() * sphereChart_normal.chartInvDiff0(q0);
     return C0i;
 }
+
+Eigen::Matrix<double, 1, 3> EqFoutputMatrixCiStar_depth_normal(
+    //not working
+    const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const double measurement_depth){
+
+    // const Vector3d& y0 = q0.normalized();
+    // const Vector3d& yHat = QHat.R.inverse() * y0;
+    Eigen::Matrix<double, 1, 3> C0i = EqFCoordinateSuite_euclid.outputMatrixCiStarDepth(q0,QHat,measurement_depth);
+    return C0i;
+
+}
+    

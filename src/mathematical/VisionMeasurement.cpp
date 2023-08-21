@@ -89,6 +89,8 @@ CSVLine& operator<<(CSVLine& line, const VisionMeasurement& vision) {
 
 VisionMeasurement operator-(const VisionMeasurement& y1, const VisionMeasurement& y2) {
     VisionMeasurement yDiff;
+    
+
     for (const pair<const int, Vector2d>& cc1 : y1.camCoordinates) {
         const auto it2 = y2.camCoordinates.find(cc1.first);
         if (it2 != y2.camCoordinates.end()) {
@@ -96,24 +98,72 @@ VisionMeasurement operator-(const VisionMeasurement& y1, const VisionMeasurement
         }
     }
     assert(y1.cameraPtr == y2.cameraPtr);
+    // assert(y1.depthValue.size() == y2.depthValue.size());
     yDiff.cameraPtr = y1.cameraPtr;
+
+    //add depth 
+    // Subtract depth values
+    for (const auto& depth1 : y1.depthValue) {
+        const auto it2 = y2.depthValue.find(depth1.first);
+        if (it2 != y2.depthValue.end()) {
+            yDiff.depthValue[depth1.first] = depth1.second - it2->second;
+        }
+    }
     return yDiff;
 }
+
 VisionMeasurement::operator Eigen::VectorXd() const {
+    // vector<int> ids = getIds();
+    // Eigen::VectorXd result = Eigen::VectorXd(2 * ids.size());
+    // for (size_t i = 0; i < ids.size(); ++i) {
+    //     result.segment<2>(2 * i) = camCoordinates.at(ids[i]);
+    // }
+    // return result;
+    //changed to 3D
     vector<int> ids = getIds();
-    Eigen::VectorXd result = Eigen::VectorXd(2 * ids.size());
+
+    Eigen::VectorXd result = Eigen::VectorXd(3 * ids.size()); // Adjusting the size for 3D coordinates
+
     for (size_t i = 0; i < ids.size(); ++i) {
-        result.segment<2>(2 * i) = camCoordinates.at(ids[i]);
+        result.segment<2>(3 * i) = camCoordinates.at(ids[i]); //  2D coordinates
+        result(3 * i + 2) = depthValue.at(ids[i]); //  corresponding depth value
     }
     return result;
 }
 
+
+
+
+// VisionMeasurement::operator Eigen::VectorXd() const {
+//     vector<int> ids = getIds();
+//     Eigen::VectorXd result = Eigen::VectorXd(2 * ids.size());
+//     for (size_t i = 0; i < ids.size(); ++i) {
+//         result.segment<2>(2 * i) = camCoordinates.at(ids[i]);
+//     }
+//     return result;
+
+// }
+
+// VisionMeasurement operator+(const VisionMeasurement& y, const Eigen::VectorXd& eta) {
+//     assert(eta.rows() == 2 * y.camCoordinates.size());
+//     VisionMeasurement result = y;
+//     size_t i = 0;
+//     for (auto& pixelCoords : result.camCoordinates) {
+//         pixelCoords.second += eta.segment<2>(2 * i);
+//         ++i;
+//     }
+//     return result;
+// }
+
 VisionMeasurement operator+(const VisionMeasurement& y, const Eigen::VectorXd& eta) {
-    assert(eta.rows() == 2 * y.camCoordinates.size());
+    assert(eta.rows() == static_cast<Eigen::Index>(3 * y.camCoordinates.size())); // Cast to match signedness
+
+    // assert(eta.rows() == 3 * y.camCoordinates.size()); // 3 instead of 2
     VisionMeasurement result = y;
     size_t i = 0;
     for (auto& pixelCoords : result.camCoordinates) {
-        pixelCoords.second += eta.segment<2>(2 * i);
+        pixelCoords.second += eta.segment<2>(3 * i); // 3 * i instead of 2 * i
+        result.depthValue[pixelCoords.first] += eta(3 * i + 2); // add corresponding depth value
         ++i;
     }
     return result;

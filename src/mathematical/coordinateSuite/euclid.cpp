@@ -23,14 +23,19 @@ using namespace liepp;
 
 Eigen::MatrixXd EqFStateMatrixA_euclid(const VIOGroup& X, const VIOState& xi0, const IMUVelocity& imuVel);
 Eigen::MatrixXd EqFInputMatrixB_euclid(const VIOGroup& X, const VIOState& xi0);
+
 Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_euclid(
     const Vector3d& q0, const SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y);
+
+Eigen::Matrix<double, 1, 3> EqFoutputMatrixCiStar_depth_euclid(
+    const Eigen::Vector3d& q0, const SOT3d& QHat, const double measurement_depth);
 
 VIOAlgebra liftInnovation_euclid(const Eigen::VectorXd& baseInnovation, const VIOState& xi0);
 VIOGroup liftInnovationDiscrete_euclid(const Eigen::VectorXd& totalInnovation, const VIOState& xi0);
 
 const EqFCoordinateSuite EqFCoordinateSuite_euclid{VIOChart_euclid,        EqFStateMatrixA_euclid,
                                                    EqFInputMatrixB_euclid, EqFoutputMatrixCiStar_euclid,
+                                                   EqFoutputMatrixCiStar_depth_euclid,
                                                    liftInnovation_euclid,  liftInnovationDiscrete_euclid};
 
 VIOAlgebra liftInnovation_euclid(const Eigen::VectorXd& totalInnovation, const VIOState& xi0) {
@@ -159,7 +164,7 @@ Eigen::MatrixXd EqFStateMatrixA_euclid(const VIOGroup& X, const VIOState& xi0, c
     return A0t;
 }
 
-//modify to 3d
+
 Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_euclid(
     const Vector3d& q0, const SOT3d& QHat, const GIFT::GICameraPtr& camPtr, const Eigen::Vector2d& y) {
     const Vector3d qHat = QHat.inverse() * q0;
@@ -182,6 +187,29 @@ Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_euclid(
 
     Matrix<double, 2, 3> Cti = 0.5 * (DRho(yTru) + DRho(yHat)) * QHat.inverse().Adjoint() * m2g;
     return Cti;
+}
+
+Eigen::Matrix<double, 1,3> EqFoutputMatrixCiStar_depth_euclid(
+    const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const double measurement_depth) {
+ 
+    Matrix<double, 4, 3> m2g;
+    m2g.block<3, 3>(0, 0) = -liepp::SO3d::skew(q0);
+    m2g.block<1, 3>(3, 0) = -q0.transpose();
+    m2g = m2g / q0.squaredNorm();
+
+    // const double yHat = q0.norm();
+    const Vector3d qHat = QHat.inverse() * q0;
+    const Vector3d yHat1 = qHat.normalized();
+    const double yHat = yHat1.norm();
+    // const double depth = measurement_depth;
+    auto DRho = [](const double d) {
+        Eigen::Matrix<double, 1, 4> DRhov; // Notice the change in matrix size
+        DRhov << 0, 0, 0, -d;
+        return DRhov;
+    };
+
+    Eigen::Matrix<double, 1, 3> Cti_depth = 0.5 * (DRho(measurement_depth) + DRho(yHat)) * QHat.inverse().Adjoint()*m2g;
+    return Cti_depth;
 }
 
 Eigen::MatrixXd EqFInputMatrixB_euclid(const VIOGroup& X, const VIOState& xi0) {

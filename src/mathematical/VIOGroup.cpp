@@ -18,6 +18,7 @@
 #include "eqvio/mathematical/VIOGroup.h"
 #include "liepp/SEn3.h"
 
+
 using namespace Eigen;
 using namespace std;
 using namespace liepp;
@@ -63,9 +64,14 @@ VisionMeasurement outputGroupAction(const VIOGroup& X, const VisionMeasurement& 
             const Vector3d bearing = measurement.cameraPtr->undistortPoint(it->second);
             newMeasurements.camCoordinates[X.id[i]] = measurement.cameraPtr->projectPoint(X.Q[i].R.inverse() * bearing);
         }
-    }
+        // Add the corresponding depth value if it exists
+        if (measurement.depthValue.find(X.id[i]) != measurement.depthValue.end()) {
+            newMeasurements.depthValue[X.id[i]] = 1/X.Q[i].a * measurement.depthValue.at(X.id[i]);
+        }
+    }   
     newMeasurements.cameraPtr = measurement.cameraPtr;
     return newMeasurements;
+
 }
 
 VIOGroup VIOGroup::operator*(const VIOGroup& other) const {

@@ -148,24 +148,63 @@ double stateDistance(const VIOState& xi1, const VIOState& xi2) {
     return dist;
 }
 
+// VisionMeasurement randomVisionMeasurement(const vector<int>& ids) {
+//     VisionMeasurement result;
+//     result.cameraPtr = createDefaultCamera();
+//     result.stamp = 0.0;
+//     for (int i = 0; i < ids.size(); ++i) {
+//         Vector3d p;
+//         do {
+//             p.setRandom();
+//             p.normalize();
+//         } while (p.z() < 1e-1);
+//         result.camCoordinates[ids[i]] = result.cameraPtr->projectPoint(p);
+//     }
+
+//     return result;
+// }
+
 VisionMeasurement randomVisionMeasurement(const vector<int>& ids) {
     VisionMeasurement result;
     result.cameraPtr = createDefaultCamera();
     result.stamp = 0.0;
+
+    // Assuming a certain range for depth values (e.g., between 1 and 10).
+    // Modify the range accordingly if needed.
+    double minDepth = 1.0;
+    double maxDepth = 10.0;
+
     for (int i = 0; i < ids.size(); ++i) {
         Vector3d p;
         do {
             p.setRandom();
             p.normalize();
         } while (p.z() < 1e-1);
+
+        // Generate a random depth value
+        double randomDepth = minDepth + (maxDepth - minDepth) * ((double) rand() / RAND_MAX);
+        
+        // Assign the depth value to the measurement (assuming depthValue is the depth container in VisionMeasurement)
+        result.depthValue[ids[i]] = randomDepth;
+
+        // If you want the 3D point to be scaled by its depth, then:
+        // p = p * randomDepth;
+
         result.camCoordinates[ids[i]] = result.cameraPtr->projectPoint(p);
     }
+
     return result;
 }
 
 double measurementDistance(const VisionMeasurement& y1, const VisionMeasurement& y2) {
     double dist = 0;
     assert(y1.camCoordinates.size() == y2.camCoordinates.size());
+    // VectorXd vecY1 = VectorXd(y1);
+    // VectorXd vecY2 = VectorXd(y2);
+
+    // // Take only the first two rows
+    // vecY1 = vecY1.head<2>();
+    // vecY2 = vecY2.head<2>();
     double scale = max(VectorXd(y1).norm(), VectorXd(y2).norm());
     VectorXd diff = (y1 - y2);
     double result = diff.norm() / scale;

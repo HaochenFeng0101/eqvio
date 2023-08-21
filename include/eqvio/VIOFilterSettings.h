@@ -80,7 +80,7 @@ struct VIOFilter::Settings {
     double initialVelocityVariance = 1.0e-2;       ///< The initial variance of the velocity error
     double initialCameraAttitudeVariance = 1.0e-5; ///< The initial variance of the camera attitude error
     double initialCameraPositionVariance = 1.0e-4; ///< The initial variance of the camera position error
-    double initialPointVariance = 1.0;             ///< The initial variance of the body-fixed landmark position error
+    double initialPointVariance = 1.0;             ///< The initial variance of the body-fixed landmark position error 1.0
     double initialPointDepthVariance = -1.0; ///< The initial variance of the body-fixed landmark depth error (optional)
     double initialBiasOmegaVariance = 0.1;   ///< The initial variance of the gyroscope bias error
     double initialBiasAccelVariance = 0.1;   ///< The initial variance of the accelerometer bias error
@@ -202,7 +202,8 @@ VIOFilter::Settings::constructInputGainMatrix() const {
 
 inline Eigen::MatrixXd VIOFilter::Settings::constructOutputGainMatrix(const size_t& numLandmarks) const {
     return this->measurementNoise * this->measurementNoise *
-           Eigen::MatrixXd::Identity(2 * numLandmarks, 2 * numLandmarks);
+    //modified to 3
+           Eigen::MatrixXd::Identity(3 * numLandmarks, 3 * numLandmarks);
 }
 
 inline Eigen::MatrixXd VIOFilter::Settings::constructInitialStateCovariance(const size_t& numLandmarks) const {

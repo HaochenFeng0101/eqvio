@@ -16,6 +16,7 @@
 */
 
 #include "eqvio/mathematical/EqFMatrices.h"
+#include <iostream>
 
 using namespace Eigen;
 using namespace std;
@@ -54,8 +55,9 @@ const Eigen::MatrixXd EqFCoordinateSuite::outputMatrixC(
     const int M = xi0.cameraLandmarks.size();
     const vector<int> ids = y.getIds();
     const int N = ids.size();
- 
-    MatrixXd CStar = MatrixXd::Zero(2 * N, VIOSensorState::CompDim + Landmark::CompDim * M);
+    
+    //modified to 3N, 21+ 3*m
+    MatrixXd CStar = MatrixXd::Zero(3 * N, VIOSensorState::CompDim + Landmark::CompDim * M);
 
     const VisionMeasurement yHat = measureSystemState(stateGroupAction(X, xi0), y.cameraPtr);
 
@@ -72,12 +74,29 @@ const Eigen::MatrixXd EqFCoordinateSuite::outputMatrixC(
             assert(X.id[k] == idNum);
 
             const int j = distance(ids.begin(), it_y);
-            CStar.block<2, 3>(2 * j, VIOSensorState::CompDim + 3 * i) =
-                useEquivariance ? outputMatrixCiStar(qi0, X.Q[k], y.cameraPtr, y.camCoordinates.at(idNum))
-                                : outputMatrixCi(qi0, X.Q[k], y.cameraPtr);
+
             // CStar.block<2, 3>(2 * j, VIOSensorState::CompDim + 3 * i) =
             //     useEquivariance ? outputMatrixCiStar(qi0, X.Q[k], y.cameraPtr, y.camCoordinates.at(idNum))
             //                     : outputMatrixCi(qi0, X.Q[k], y.cameraPtr);
+
+            // CStar.block<2, 3>(2 * j, VIOSensorState::CompDim + 3 * i) =
+            //     useEquivariance ? outputMatrixCiStar(qi0, X.Q[k], y.cameraPtr, y.camCoordinates.at(idNum))
+            //                     : outputMatrixCi(qi0, X.Q[k], y.cameraPtr);
+         
+            
+            Eigen::Matrix<double, 2, 3> matrixRGB= useEquivariance ? outputMatrixCiStar(qi0, X.Q[k], y.cameraPtr, y.camCoordinates.at(idNum))
+                                                     : outputMatrixCi(qi0, X.Q[k], y.cameraPtr);
+            const double depthValue = y.depthValue.at(idNum);
+           
+            Eigen::Matrix<double, 1, 3> matrixDepth = outputMatrixci_depth(qi0, X.Q[k], depthValue);
+            // std::cout << "depth matrix" <<matrixDepth << std::endl;
+            Eigen::Matrix<double, 3, 3> combinedMatrixC;
+            combinedMatrixC << matrixRGB,
+                  matrixDepth;
+
+            CStar.block<3, 3>(3 * j, VIOSensorState::CompDim + 3 * i) = combinedMatrixC;
+
+            // std::cout << "Matrix Cstar:\n" << combinedMatrixC << std::endl;
         }
     }
 
@@ -92,9 +111,9 @@ const Eigen::Matrix<double, 2, 3> EqFCoordinateSuite::outputMatrixCi(
     return outputMatrixCiStar(q0, QHat, camPtr, yHat);
 }
 
-// const Eigen::Matrix<double, 2, 3> EqFCoordinateSuite::outputMatrixCi(
-//     const Eigen::Vector3d& q0, const liepp::SOT3d& QHat, const GIFT::GICameraPtr& camPtr) const {
-//     const Vector3d qHat = QHat.inverse() * q0;
-//     const Vector2d yHat = camPtr->projectPoint(qHat);
-//     return outputMatrixCiStar(q0, QHat, camPtr, yHat);
-// }
+const Eigen::Matrix<double, 1, 3> EqFCoordinateSuite::outputMatrixci_depth(
+    const Eigen::Vector3d& q0, const liepp::SOT3d& QHat,  const double measurement_depth) const {
+
+    return outputMatrixCiStarDepth(q0,QHat, measurement_depth);
+}
+

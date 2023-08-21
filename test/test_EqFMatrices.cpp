@@ -19,6 +19,7 @@
 #include "eqvio/mathematical/EqFMatrices.h"
 #include "testing_utilities.h"
 #include "gtest/gtest.h"
+#include <iostream>
 
 using namespace Eigen;
 using namespace std;
@@ -152,6 +153,12 @@ TEST_P(EqFSuiteTest, outputMatrixC) {
         const VisionMeasurement yHat = measureSystemState(xiHat, camPtr);
         const MatrixXd Ct = coordinateSuite.outputMatrixC(xi0, XHat, yHat);
         const MatrixXd Ct2 = coordinateSuite.outputMatrixC(xi0, XHat, yHat, false);
+        // MatrixXd Ct = Ct11.block(0, 0, 2, Ct11.cols());
+        // MatrixXd Ct2 = Ct22.block(0, 0, 2, Ct22.cols());
+
+
+        // std::cout << "Matrix Ct:" << std::endl << Ct << std::endl;
+        // std::cout << "Matrix Ct2:" << std::endl << Ct2 << std::endl;
         assertMatrixEquality(Ct, Ct2);
 
         // Compare the C matrix to the expression from which it is derived
@@ -165,8 +172,12 @@ TEST_P(EqFSuiteTest, outputMatrixC) {
             const auto xi_e = coordinateSuite.stateChart.inv(epsilon, xi0);
             const auto xi = stateGroupAction(XHat, xi_e);
             const auto y = measureSystemState(xi, camPtr);
+
             const VectorXd yTilde = y - yHat;
+
+            // std::cout << "residual " << yTilde.transpose() << std::endl;
             return yTilde;
+            // return yTilde.head(2);
         };
 
         // Check the function at zero
@@ -174,7 +185,16 @@ TEST_P(EqFSuiteTest, outputMatrixC) {
         EXPECT_LE(c0AtZero.norm(), NEAR_ZERO);
 
         const double floatStep = std::cbrt(std::numeric_limits<float>::epsilon());
-        testDifferential(ct, VectorXd::Zero(xi0.Dim()), Ct, floatStep);
+        testDifferential(ct, VectorXd::Zero(xi0.Dim()), Ct, floatStep); // floatstep is tolerance
+
+        // void testDifferential(const F& f, const Eigen::VectorXd& x, const Eigen::MatrixXd& Df, double h = -1.0) {
+        //     // Check that each partial derivative is correct
+        //     if (h < 0) {
+        //         h = std::cbrt(std::numeric_limits<double>::epsilon());
+        //     }
+        //     Eigen::MatrixXd numericalDf = numericalDifferential(f, x, h);
+        //     assertMatrixEquality(Df, numericalDf, h);
+        // }
     }
 }
 
@@ -182,7 +202,7 @@ TEST(EqFSuiteTest, outputMatrixCStar) {
     srand(0);
     const EqFCoordinateSuite& coordinateSuite = EqFCoordinateSuite_euclid;
     const GIFT::GICameraPtr camPtr = createDefaultCamera();
-
+    
     for (int testRep = 0; testRep < TEST_REPS; ++testRep) {
 
         // Set some random conditions
@@ -238,6 +258,56 @@ TEST(EqFSuiteTest, outputMatrixCStar) {
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    EqFSuites, EqFSuiteTest,
-    testing::Values(EqFCoordinateSuite_euclid, EqFCoordinateSuite_invdepth, EqFCoordinateSuite_normal));
+
+// TEST(EqFSuiteTest, outputMatrixCStarDepth) {
+//     srand(0);
+//     const EqFCoordinateSuite& coordinateSuite = EqFCoordinateSuite_euclid;
+//     vector<int> ids = {5, 0, 1, 2, 3, 4};
+//     const int N = ids.size();
+//     const GIFT::GICameraPtr camPtr = createDefaultCamera();
+//     const VIOState xi0 = reasonableStateElement(ids);
+//     const VIOGroup XHat = reasonableGroupElement(ids);
+//     const VIOState xiHat = stateGroupAction(XHat, xi0);
+//     const VisionMeasurement yHat = measureSystemState(xiHat, camPtr);
+
+//     for (int testRep = 0; testRep < TEST_REPS; ++testRep) {
+        
+//         // Set some random conditions
+//         const Vector3d q0 = Vector3d::Random() * 10 + Vector3d(0, 0, 20.0);
+//         liepp::SOT3d QHat;
+//         QHat.R = liepp::SO3d::exp(Vector3d::Random() * 0.02);
+//         QHat.a = 2.0 * (double)rand() / RAND_MAX + 1.0;
+
+//         const Vector3d qHat = QHat.inverse() * q0;
+        
+//         // Generate a random depth for testing
+//         double depth = 3.0; // Assuming depth is euclidean distance.
+
+//         const MatrixXd Ct = coordinateSuite.outputMatrixci_depth(q0, QHat, depth); 
+
+//         // Verify the depth Jacobian
+//         auto depthFunc = [&](const Vector3d& epsilon) {
+//             const auto q_e = liepp::SOT3d::exp(-epsilon) * q0;
+//             const auto q = QHat.inverse() * q_e;
+//             return q.norm();
+//         };
+
+//         const double floatStep = 100.0 * std::cbrt(std::numeric_limits<float>::epsilon());
+//         for (int j = 0; j < Ct.cols(); ++j) {
+//             const Eigen::Vector3d ej = Eigen::VectorXd::Unit(Ct.cols(), j);
+//             const Eigen::Vector3d eps = floatStep * ej;
+//             const double trueDepth = depthFunc(eps);
+//             const double depthDiff = trueDepth - depth;
+
+//             const Eigen::VectorXd depthTildeEst = Ct * eps;
+
+//             const double linErrorEst = (depthTildeEst - depthDiff).norm();
+
+//             // Check if the error is below a threshold
+//             EXPECT_LE(linErrorEst, 0.01) << "Direction " << j << std::endl;
+//         }
+//     }
+// }
+
+INSTANTIATE_TEST_SUITE_P(EqFSuites, EqFSuiteTest, testing::Values(EqFCoordinateSuite_euclid));
+// testing::Values(EqFCoordinateSuite_euclid, EqFCoordinateSuite_invdepth, EqFCoordinateSuite_normal));

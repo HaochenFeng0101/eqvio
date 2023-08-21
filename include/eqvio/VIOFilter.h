@@ -60,17 +60,16 @@ class VIOFilter {
      * added to the state from those features. Depending on the chosen settings, these landmarks are initialised with
      * either the median scene depth or a fixed depth value.
      */
-    void addNewLandmarksRGBD(const VisionMeasurement& measurement); 
-
+    // void addNewLandmarksRGBD(const VisionMeasurement& measurement); 
+    // void addNewLandmarks(const VisionMeasurement& measurement);
 
     void addNewLandmarksRGB(const VisionMeasurement& measurement); 
 
 
-    //add this function
-    //process incoming measurement kick out 0 depth
-    VisionMeasurement processAndAddNewLandmarksRGBD(VisionMeasurement measurement);
-    //process current lmks, kick out that has 0 depth
-    void checkLandmarksRGBD(VisionMeasurement& measurement);
+    VisionMeasurement processAndAddNewLandmarksRGBD(VisionMeasurement& measurement);
+
+    
+    
     
     /** @brief Removes all landmarks with id numbers that do not appear in measurementIds
      *
