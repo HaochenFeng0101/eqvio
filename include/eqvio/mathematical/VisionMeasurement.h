@@ -52,6 +52,9 @@ struct VisionMeasurement {
      */
     std::vector<int> getIds() const;
 
+    std::vector<int> getIddepth() const;
+    std::vector<int> getValidDepthIds() const;
+    
     /** @brief cast the measurement to an Eigen Vector
      *
      * @return The cam coordinates as a vector

@@ -44,7 +44,7 @@ Eigen::VectorXd sampleGaussianDistribution(const Eigen::MatrixXd& covariance) {
         x(i) = dist(rng);
     }
 
-    Eigen::MatrixXd L = covariance.llt().matrixL();
+    Eigen::MatrixXd L = covariance.llt().matrixL(); //A  = LL^T
     Eigen::VectorXd sample = L * x;
 
     return sample;

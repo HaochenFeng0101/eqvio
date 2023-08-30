@@ -16,7 +16,7 @@
 */
 
 #include "eqvio/mathematical/EqFMatrices.h"
-
+#include <iostream>
 using namespace Eigen;
 using namespace std;
 using namespace liepp;
@@ -186,6 +186,7 @@ Eigen::Matrix<double, 2, 3> EqFoutputMatrixCiStar_euclid(
     const Vector3d yTru = camPtr->undistortPoint(y);
 
     Matrix<double, 2, 3> Cti = 0.5 * (DRho(yTru) + DRho(yHat)) * QHat.inverse().Adjoint() * m2g;
+    // assert(Cti.hasNaN());
     return Cti;
 }
 
@@ -196,19 +197,22 @@ Eigen::Matrix<double, 1,3> EqFoutputMatrixCiStar_depth_euclid(
     m2g.block<3, 3>(0, 0) = -liepp::SO3d::skew(q0);
     m2g.block<1, 3>(3, 0) = -q0.transpose();
     m2g = m2g / q0.squaredNorm();
-
-    // const double yHat = q0.norm();
+    
+    // const double scale = QHat.a;
     const Vector3d qHat = QHat.inverse() * q0;
-    const Vector3d yHat1 = qHat.normalized();
-    const double yHat = yHat1.norm();
+    const double yHat = qHat.norm();
+    // const Vector3d yHat1 = qHat.normalized();
+    // const double yHat = yHat1.norm();
     // const double depth = measurement_depth;
-    auto DRho = [](const double d) {
+    auto DRho = [&](const double d) {
         Eigen::Matrix<double, 1, 4> DRhov; // Notice the change in matrix size
         DRhov << 0, 0, 0, -d;
         return DRhov;
     };
 
     Eigen::Matrix<double, 1, 3> Cti_depth = 0.5 * (DRho(measurement_depth) + DRho(yHat)) * QHat.inverse().Adjoint()*m2g;
+    // std::cout<< Cti_depth <<std::endl;
+    // assert(Cti_depth.hasNaN());
     return Cti_depth;
 }
 

@@ -17,12 +17,12 @@
 
 #pragma once
 
+#include "eqvio/common/LieYaml.h"
+#include "yaml-cpp/yaml.h"
+#include <iostream>
 #include <memory>
 #include <ostream>
 #include <string>
-
-#include "eqvio/common/LieYaml.h"
-#include "yaml-cpp/yaml.h"
 
 #include "VIOFilter.h"
 #include "eqvio/common/safeConfig.h"
@@ -64,27 +64,30 @@ struct VIOFilter::Settings {
     double cameraAttitudeProcessVariance = 0.001; ///< The variance of the Wiener process of the camera attitude error
     double cameraPositionProcessVariance = 0.001; ///< The variance of the Wiener process of the camera position error
     double pointProcessVariance = 0.001;          ///< The variance of the Wiener process of the landmark position error
+    double pointProcessVariancedepth = 0.1;
 
     double velGyrNoise = 1e-4;    ///< The noise of the gyroscope measurements
     double velAccNoise = 1e-3;    ///< The noise of the accelerometer measurements
     double velGyrBiasWalk = 1e-5; ///< The random walk of the gyroscope measurements
     double velAccBiasWalk = 1e-3; ///< The random walk of the accelerometer measurements
 
+    
     double measurementNoise = 2.0;     ///< The noise of the feature pixel coordinate measurements
     double outlierThresholdAbs = 1e8;  ///< The absolute outlier threshold. A lower value means more outliers.
     double outlierThresholdProb = 1e8; ///< The relative outlier threshold. A lower value means more outliers.
     double featureRetention = 0.3; ///< The minimum proportion of features that are always kept, regardless of outliers.
+    double measurementNoisedepth = 0.1;  ///< noise of depth measurement
 
     double initialAttitudeVariance = 1.0e-4;       ///< The initial variance of the attitude error
     double initialPositionVariance = 1.0e-4;       ///< The initial variance of the position error
     double initialVelocityVariance = 1.0e-2;       ///< The initial variance of the velocity error
     double initialCameraAttitudeVariance = 1.0e-5; ///< The initial variance of the camera attitude error
     double initialCameraPositionVariance = 1.0e-4; ///< The initial variance of the camera position error
-    double initialPointVariance = 1.0;             ///< The initial variance of the body-fixed landmark position error 1.0
-    double initialPointDepthVariance = -1.0; ///< The initial variance of the body-fixed landmark depth error (optional)
-    double initialBiasOmegaVariance = 0.1;   ///< The initial variance of the gyroscope bias error
-    double initialBiasAccelVariance = 0.1;   ///< The initial variance of the accelerometer bias error
-    double initialSceneDepth = 1.0;          ///< The depth value used to initialise new features as landmarks
+    double initialPointVariance = 1.0;     ///< The initial variance of the body-fixed landmark position error 1.0
+    double initialPointDepthVariance = 2.0;  ///< The initial variance of the body-fixed landmark depth error (optional)
+    double initialBiasOmegaVariance = 0.1; ///< The initial variance of the gyroscope bias error
+    double initialBiasAccelVariance = 0.1; ///< The initial variance of the accelerometer bias error
+    double initialSceneDepth = 1.0;        ///< The depth value used to initialise new features as landmarks
 
     bool useDiscreteInnovationLift = true; ///< If true, compute the EqF correction using a discrete action inverse.
     bool useDiscreteVelocityLift = true;   ///< If true, use a discretised version of the EqF lift function.
@@ -120,7 +123,7 @@ struct VIOFilter::Settings {
 
     /** @brief Construct the output covariance from the provided settings.
      */
-    Eigen::MatrixXd constructOutputGainMatrix(const size_t& numLandmarks) const;
+    Eigen::MatrixXd constructOutputGainMatrix(const VisionMeasurement& measurement) const; //, const size_t& numdepth
 };
 
 inline VIOFilter::Settings::Settings(const YAML::Node& configNode) {
@@ -183,9 +186,16 @@ inline Eigen::MatrixXd VIOFilter::Settings::constructStateGainMatrix(const size_
     PMat.block<3, 3>(12, 12) *= this->velocityProcessVariance;
     PMat.block<3, 3>(15, 15) *= this->cameraAttitudeProcessVariance;
     PMat.block<3, 3>(18, 18) *= this->cameraPositionProcessVariance;
-    PMat.block(VIOSensorState::CompDim, VIOSensorState::CompDim, 3 * numLandmarks, 3 * numLandmarks) *=
-        this->pointProcessVariance;
-
+    // PMat.block(VIOSensorState::CompDim, VIOSensorState::CompDim, 3 * numLandmarks, 3 * numLandmarks) *=
+    //     this->pointProcessVariance;
+    for (size_t i = 0; i < numLandmarks; ++i) {
+        // Set the first two dimensions of the 3x3 block to initialVariance
+        PMat(VIOSensorState::CompDim + 3 * i, VIOSensorState::CompDim + 3 * i) *= this->pointProcessVariance;
+        PMat(VIOSensorState::CompDim + 3 * i + 1, VIOSensorState::CompDim + 3 * i + 1) *= this->pointProcessVariance;
+        // Set the third dimension of the 3x3 block to depthVariance
+        PMat(VIOSensorState::CompDim + 3 * i + 2, VIOSensorState::CompDim + 3 * i + 2) *=
+            this->pointProcessVariancedepth;
+    }
     return PMat;
 }
 
@@ -200,10 +210,41 @@ VIOFilter::Settings::constructInputGainMatrix() const {
     return R;
 }
 
-inline Eigen::MatrixXd VIOFilter::Settings::constructOutputGainMatrix(const size_t& numLandmarks) const {
-    return this->measurementNoise * this->measurementNoise *
-    //modified to 3
-           Eigen::MatrixXd::Identity(3 * numLandmarks, 3 * numLandmarks);
+// inline Eigen::MatrixXd VIOFilter::Settings::constructOutputGainMatrix(const size_t& numLandmarks) const {
+//     return this->measurementNoise * this->measurementNoise *Eigen::MatrixXd::Identity(3 * numLandmarks, 3 *
+//     numLandmarks);
+
+// }
+
+inline Eigen::MatrixXd VIOFilter::Settings::constructOutputGainMatrix(const VisionMeasurement& measurement) const {
+    int numLandmarks = measurement.camCoordinates.size();
+    int M = numLandmarks;
+    std::vector<int> validDepthIds;
+    
+    // Identify valid depth landmarks
+    for (int i = 0; i < M; ++i) {
+        int idNum = measurement.getIds()[i];
+        auto depthIter = measurement.depthValue.find(idNum);
+        if (depthIter != measurement.depthValue.end() && !std::isnan(depthIter->second) && depthIter->second != 0.0) {
+            validDepthIds.push_back(idNum);
+        }
+    }
+    int validDepthCount = validDepthIds.size();
+
+    Eigen::MatrixXd finalGainMatrix = Eigen::MatrixXd::Zero(2* numLandmarks + validDepthCount, 2 * numLandmarks + validDepthCount);
+    
+    Eigen::MatrixXd outputGainMatrixbearing = this->measurementNoise * this->measurementNoise*
+    Eigen::MatrixXd::Identity(2 * numLandmarks, 2* numLandmarks);
+    finalGainMatrix.block(0,0,2 * numLandmarks, 2 * numLandmarks) = outputGainMatrixbearing;
+
+    const double depthnoise = this->measurementNoisedepth * this->measurementNoisedepth;
+    // Create diagonal matrix with depthnoise value
+    Eigen::MatrixXd depthDiagonalMatrix = Eigen::MatrixXd::Identity(validDepthCount, validDepthCount) * depthnoise;
+
+    finalGainMatrix.block(2 * numLandmarks, 2 * numLandmarks, validDepthCount, validDepthCount) = depthDiagonalMatrix;
+
+    // std::cout<< "gain matirx" <<finalGainMatrix.transpose()<<std::endl;
+    return finalGainMatrix;
 }
 
 inline Eigen::MatrixXd VIOFilter::Settings::constructInitialStateCovariance(const size_t& numLandmarks) const {
@@ -223,6 +264,8 @@ inline Eigen::MatrixXd VIOFilter::Settings::constructInitialStateCovariance(cons
     if (initialPointDepthVariance > 0) {
         for (size_t i = 0; i < numLandmarks; ++i) {
             Sigma(VIOSensorState::CompDim + 3 * i + 2, VIOSensorState::CompDim + 3 * i + 2) = initialPointDepthVariance;
+            // Sigma(VIOSensorState::CompDim + 3 * i + 3, VIOSensorState::CompDim + 3 * i + 3) =
+            // initialPointDepthVariance;
         }
     }
 

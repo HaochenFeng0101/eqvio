@@ -119,10 +119,11 @@ void VIO_eqf::performVisionUpdate(
     // std::cout << "Size of Sigma: " << Sigma.rows() << "x" << Sigma.cols() << std::endl;
     // std::cout << "Size of Ct * Sigma * Ct.transpose(): " << (Ct * Sigma * Ct.transpose()).rows() << "x" << (Ct * Sigma * Ct.transpose()).cols() << std::endl;
     // std::cout << "Size of outputGainMatrix: " << outputGainMatrix.rows() << "x" << outputGainMatrix.cols() << std::endl;
-
+    // std::cout << "Size of yTilde: " << yTilde.rows() << std::endl
+    ;
     const auto& SInv = (Ct * Sigma * Ct.transpose() + outputGainMatrix).inverse();
     const auto& K = Sigma * Ct.transpose() * SInv;
-    // std::cout << "Size of yTilde: " << yTilde.rows() << std::endl;
+    
     // std::cout << "Size of SInv: " << SInv.rows() << "x" << SInv.cols() << std::endl;
     // std::cout << "Size of K: " << K.rows() << "x" << K.cols() << std::endl;
     

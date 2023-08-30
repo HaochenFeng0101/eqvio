@@ -257,7 +257,7 @@ VisionMeasurement VIOSimulator::getVision(const double& currentTime) const {
     // Corrupt with noise
     if (outputNoise) {
         Eigen::VectorXd outputNoiseSample =
-            sampleGaussianDistribution(filterSettings.constructOutputGainMatrix(measData.camCoordinates.size()));
+            sampleGaussianDistribution(filterSettings.constructOutputGainMatrix(measData));
         measData = measData + outputNoiseSample;
     }
 

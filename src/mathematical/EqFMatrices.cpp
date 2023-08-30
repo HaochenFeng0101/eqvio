@@ -56,9 +56,8 @@ const Eigen::MatrixXd EqFCoordinateSuite::outputMatrixC(
     const vector<int> ids = y.getIds();
     const int N = ids.size();
     
-    //modified to 3N, 21+ 3*m
-    MatrixXd CStar = MatrixXd::Zero(3 * N, VIOSensorState::CompDim + Landmark::CompDim * M);
-
+    MatrixXd Cstar_rgb = MatrixXd::Zero(2 * N, VIOSensorState::CompDim + Landmark::CompDim * M);
+  
     const VisionMeasurement yHat = measureSystemState(stateGroupAction(X, xi0), y.cameraPtr);
 
     for (int i = 0; i < M; ++i) {
@@ -69,7 +68,6 @@ const Eigen::MatrixXd EqFCoordinateSuite::outputMatrixC(
         assert(it_Q != X.id.end());
         const int k = distance(X.id.begin(), it_Q);
         if (it_y != ids.end()) {
-
             assert(*it_y == *it_Q);
             assert(X.id[k] == idNum);
 
@@ -79,26 +77,79 @@ const Eigen::MatrixXd EqFCoordinateSuite::outputMatrixC(
             //     useEquivariance ? outputMatrixCiStar(qi0, X.Q[k], y.cameraPtr, y.camCoordinates.at(idNum))
             //                     : outputMatrixCi(qi0, X.Q[k], y.cameraPtr);
 
-            // CStar.block<2, 3>(2 * j, VIOSensorState::CompDim + 3 * i) =
-            //     useEquivariance ? outputMatrixCiStar(qi0, X.Q[k], y.cameraPtr, y.camCoordinates.at(idNum))
-            //                     : outputMatrixCi(qi0, X.Q[k], y.cameraPtr);
-         
-            
             Eigen::Matrix<double, 2, 3> matrixRGB= useEquivariance ? outputMatrixCiStar(qi0, X.Q[k], y.cameraPtr, y.camCoordinates.at(idNum))
                                                      : outputMatrixCi(qi0, X.Q[k], y.cameraPtr);
-            const double depthValue = y.depthValue.at(idNum);
-           
-            Eigen::Matrix<double, 1, 3> matrixDepth = outputMatrixci_depth(qi0, X.Q[k], depthValue);
-            // std::cout << "depth matrix" <<matrixDepth << std::endl;
-            Eigen::Matrix<double, 3, 3> combinedMatrixC;
-            combinedMatrixC << matrixRGB,
-                  matrixDepth;
 
-            CStar.block<3, 3>(3 * j, VIOSensorState::CompDim + 3 * i) = combinedMatrixC;
-
-            // std::cout << "Matrix Cstar:\n" << combinedMatrixC << std::endl;
+            // Store RGB values
+            Cstar_rgb.block<2, 3>(2 * j, VIOSensorState::CompDim + 3 * i) = matrixRGB;
         }
     }
+    
+    vector<int> validDepthIds;
+    int validDepthCount = 0;
+    // for (int i = 0; i < M; ++i) {
+    //     const int& idNum = xi0.cameraLandmarks[i].id;
+    //     if (y.depthValue.find(idNum) != y.depthValue.end() && !std::isnan(y.depthValue.at(idNum)) && y.depthValue.at(idNum) != 0) {
+    //         validDepthCount++;
+    //         validDepthIds.push_back(idNum);
+    //     }
+    // }
+
+    std::unordered_map<int, int> idToIndexMap;
+    for (int i = 0; i < M; ++i) {
+        const int& idNum = xi0.cameraLandmarks[i].id;
+        if (y.depthValue.find(idNum) != y.depthValue.end() && 
+            !std::isnan(y.depthValue.at(idNum)) && 
+            y.depthValue.at(idNum) != 0) {
+
+            validDepthCount++;
+            validDepthIds.push_back(idNum);
+            idToIndexMap[idNum] = i; // Only insert id into the map if it's valid in the depth measurements
+        }
+    }
+    std::sort(validDepthIds.begin(), validDepthIds.end());
+    //Create the matrix with the determined size
+    MatrixXd Cstar_depth = MatrixXd::Zero(validDepthCount, VIOSensorState::CompDim + Landmark::CompDim * M);
+
+    
+
+    for (size_t depthIdx = 0; depthIdx < validDepthIds.size(); ++depthIdx) {
+        const int& idNum = validDepthIds[depthIdx];
+        
+        // Check if idNum exists in X.id and y's depth values
+        const auto it_y = find(ids.begin(), ids.end(), idNum); 
+        const auto it_Q = find(X.id.begin(), X.id.end(), idNum);
+
+        assert(it_Q != X.id.end());
+        const int k = distance(X.id.begin(), it_Q);
+        
+        if (it_y != ids.end()) {
+            assert(*it_y == *it_Q);
+            assert(X.id[k] == idNum);
+
+            const liepp::SOT3d& QHat = X.Q[k];
+            const Vector3d& qi0 = xi0.cameraLandmarks[k].p; 
+
+            // const Vector3d qHat = QHat.inverse() * qi0;
+            
+            const double depthValue = y.depthValue.at(idNum);
+            // std::cout <<"depth \n" << depthValue <<std::endl;
+            // // std::cout << "Current idNum: \n " << idNum << std::endl;
+            // std::cout << "use qvalue to calculate depth: \n" << qHat.norm() << std::endl;
+
+            Eigen::Matrix<double, 1, 3> matrixDepth = outputMatrixci_depth(qi0, QHat, depthValue);
+            // std::cout<<"depth matrix" <<matrixDepth<<std::endl;
+
+            //k = idNum -1
+            Cstar_depth.block<1, 3>(depthIdx, VIOSensorState::CompDim + 3 * k) = matrixDepth;
+            // std::cout<<Cstar_depth<<std::endl;
+        }
+    } 
+
+    MatrixXd CStar(Cstar_rgb.rows() + Cstar_depth.rows(), Cstar_rgb.cols());
+
+   
+    CStar << Cstar_rgb, Cstar_depth;
 
     assert(!CStar.hasNaN());
     return CStar;

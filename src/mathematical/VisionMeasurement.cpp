@@ -17,6 +17,7 @@
 
 #include "eqvio/mathematical/VisionMeasurement.h"
 #include "eqvio/mathematical/VIOState.h"
+#include <iostream>
 
 using namespace std;
 using namespace Eigen;
@@ -26,6 +27,24 @@ std::vector<int> VisionMeasurement::getIds() const {
     transform(camCoordinates.begin(), camCoordinates.end(), ids.begin(), [](const auto& cc) { return cc.first; });
     return ids;
 }
+
+std::vector<int> VisionMeasurement::getIddepth() const {
+    std::vector<int> ids;
+    ids.reserve(depthValue.size()); // reserve space for the expected number of elements
+    transform(depthValue.begin(), depthValue.end(), std::back_inserter(ids), [](const auto& pair) { return pair.first; });
+    return ids;
+}
+
+std::vector<int> VisionMeasurement::getValidDepthIds() const {
+    std::vector<int> validIds;
+    for (const auto& pair : depthValue) {
+        if (pair.second != 1000) {
+            validIds.push_back(pair.first);
+        }
+    }
+    return validIds;
+}
+
 
 std::map<int, cv::Point2f> VisionMeasurement::ocvCoordinates() const {
     std::map<int, cv::Point2f> ocvPoints;
@@ -95,7 +114,7 @@ VisionMeasurement operator-(const VisionMeasurement& y1, const VisionMeasurement
         const auto it2 = y2.camCoordinates.find(cc1.first);
         if (it2 != y2.camCoordinates.end()) {
             yDiff.camCoordinates[cc1.first] = cc1.second - it2->second;
-        }
+        }   
     }
     assert(y1.cameraPtr == y2.cameraPtr);
     // assert(y1.depthValue.size() == y2.depthValue.size());
@@ -103,12 +122,21 @@ VisionMeasurement operator-(const VisionMeasurement& y1, const VisionMeasurement
 
     //add depth 
     // Subtract depth values
+    const double wired = 1000;
     for (const auto& depth1 : y1.depthValue) {
         const auto it2 = y2.depthValue.find(depth1.first);
-        if (it2 != y2.depthValue.end()) {
-            yDiff.depthValue[depth1.first] = depth1.second - it2->second;
+        if (depth1.second == 0) {
+            yDiff.depthValue[depth1.first] = wired; //give it a wired value
+            continue; // Skip if depth is 0
         }
+
+        // if (it2 != y2.depthValue.end()) {
+        yDiff.depthValue[depth1.first] = depth1.second - it2->second;
+        // } else {
+        //     yDiff.depthValue[depth1.first] = wired; // or assign any other value/operation you see fit
+        // }
     }
+
     return yDiff;
 }
 
@@ -119,20 +147,50 @@ VisionMeasurement::operator Eigen::VectorXd() const {
     //     result.segment<2>(2 * i) = camCoordinates.at(ids[i]);
     // }
     // return result;
-    //changed to 3D
+    
     vector<int> ids = getIds();
+    vector<int> validdepthid = getValidDepthIds();
+    Eigen::VectorXd result = Eigen::VectorXd(2 * ids.size() + validdepthid.size()); 
 
-    Eigen::VectorXd result = Eigen::VectorXd(3 * ids.size()); // Adjusting the size for 3D coordinates
-
+    // for (size_t i = 0; i < ids.size(); ++i) {
+    //     result.segment<2>(3 * i) = camCoordinates.at(ids[i]); //  2D coordinates
+    //     result(3 * i + 2) = depthValue.at(ids[i]); //  corresponding depth value
+    // }
     for (size_t i = 0; i < ids.size(); ++i) {
-        result.segment<2>(3 * i) = camCoordinates.at(ids[i]); //  2D coordinates
-        result(3 * i + 2) = depthValue.at(ids[i]); //  corresponding depth value
+    if (camCoordinates.find(ids[i]) != camCoordinates.end()) {
+        result.segment<2>(2 * i) = camCoordinates.at(ids[i]); // 2D coordinates
     }
-    return result;
+    }
+    // if (depthValue.find(ids[i]) != depthValue.end()) {
+    //     if(depthValue.at(ids[i]==100)){
+
+    //     }
+    //     result(3 * i + 2) = depthValue.at(ids[i]); // corresponding depth value
+    //     }
+    size_t offset = 2 * ids.size(); // initial offset is set to after all the 2D camCoordinates
+    for (size_t i = 0; i < validdepthid.size(); ++i) {
+        if (depthValue.find(validdepthid[i]) != depthValue.end()) {
+            result(offset) = depthValue.at(validdepthid[i]); // corresponding depth value
+            offset += 1;
+        }
+    }
+    return result;  
 }
 
 
+VisionMeasurement operator+(const VisionMeasurement& y, const Eigen::VectorXd& eta) {
+    assert(eta.rows() == static_cast<Eigen::Index>(3 * y.camCoordinates.size())); // Cast to match signedness
 
+    // assert(eta.rows() == 3 * y.camCoordinates.size()); // 3 instead of 2
+    VisionMeasurement result = y;
+    size_t i = 0;
+    for (auto& pixelCoords : result.camCoordinates) {
+        pixelCoords.second += eta.segment<2>(3 * i); // 3 * i instead of 2 * i
+        result.depthValue[pixelCoords.first] += eta(3 * i + 2); // add corresponding depth value
+        ++i;
+    }
+    return result;
+}
 
 // VisionMeasurement::operator Eigen::VectorXd() const {
 //     vector<int> ids = getIds();
@@ -154,17 +212,3 @@ VisionMeasurement::operator Eigen::VectorXd() const {
 //     }
 //     return result;
 // }
-
-VisionMeasurement operator+(const VisionMeasurement& y, const Eigen::VectorXd& eta) {
-    assert(eta.rows() == static_cast<Eigen::Index>(3 * y.camCoordinates.size())); // Cast to match signedness
-
-    // assert(eta.rows() == 3 * y.camCoordinates.size()); // 3 instead of 2
-    VisionMeasurement result = y;
-    size_t i = 0;
-    for (auto& pixelCoords : result.camCoordinates) {
-        pixelCoords.second += eta.segment<2>(3 * i); // 3 * i instead of 2 * i
-        result.depthValue[pixelCoords.first] += eta(3 * i + 2); // add corresponding depth value
-        ++i;
-    }
-    return result;
-}

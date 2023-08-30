@@ -18,7 +18,7 @@
 #pragma once
 
 #include <random>
-
+#include <iostream>
 #include "eigen3/Eigen/Dense"
 #include "eqvio/mathematical/Geometry.h"
 #include "eqvio/mathematical/IMUVelocity.h"
@@ -49,6 +49,8 @@ void testDifferential(const F& f, const Eigen::VectorXd& x, const Eigen::MatrixX
         h = std::cbrt(std::numeric_limits<double>::epsilon());
     }
     Eigen::MatrixXd numericalDf = numericalDifferential(f, x, h);
+    
+    // std::cout <<"numerical diff" << numericalDf <<std::endl;
     assertMatrixEquality(Df, numericalDf, h);
 }
 

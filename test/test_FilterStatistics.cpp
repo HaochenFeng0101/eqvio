@@ -138,8 +138,11 @@ TEST_F(FilterStatisticsTest, inputDistribution) {
 }
 
 TEST_F(FilterStatisticsTest, outputDistribution) {
+    VisionMeasurement measurement = measureSystemState(xi0,camPtr);
     // Compute the probability of each particle given a measurement and resample
-    const Eigen::MatrixXd outputGain = settings.constructOutputGainMatrix(ids.size());
+    const Eigen::MatrixXd outputGain = settings.constructOutputGainMatrix(measurement);
+    std::cout<<outputGain<<std::endl;
+    // const Eigen::MatrixXd outputGain = settings.constructOutputGainMatrix(ids.size()); //,ids.size()
     const auto outputGainInv = outputGain.inverse().eval();
     const Eigen::VectorXd outputNoiseSample = sampleGaussianDistribution(outputGain);
     const auto measOutput = measureSystemState(xi0, camPtr) + outputNoiseSample;
@@ -150,17 +153,23 @@ TEST_F(FilterStatisticsTest, outputDistribution) {
             // Compute the (non-normalised) probability of xi given y
             const auto estOutput = measureSystemState(xi, camPtr);
             Eigen::VectorXd outputError = measOutput - estOutput;
+            std::cout <<outputError <<std::endl;
+            std::cout <<outputGainInv<<std::endl;
+            std::cout<< "outputerror"<<outputError<<std::endl;
             const double logLikelihood = outputError.transpose() * outputGainInv * outputError;
             const double scaledProbability = std::exp(-0.5 * logLikelihood);
+            std::cout <<"sacle prob" << scaledProbability <<std::endl;
             return scaledProbability;
         });
+
     const double weightSum = std::accumulate(sampleWeights.begin(), sampleWeights.end(), 0.0);
+    //normalize 
     for (double& w : sampleWeights) {
         w = w / weightSum;
     }
     const double newWeightSum = std::accumulate(sampleWeights.begin(), sampleWeights.end(), 0.0);
     particles = weightedResample(particles, sampleWeights);
-
+ 
     // Incorporate the measurement into the filter
     filter.performVisionUpdate(measOutput, outputGain);
 

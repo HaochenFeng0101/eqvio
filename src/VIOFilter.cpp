@@ -231,7 +231,7 @@ void VIOFilter::processVisionDataRGB(const VisionMeasurement& measurement) {
     loopTimer.startTiming("correction");
 
     filterState.performVisionUpdate(
-        matchedMeasurement, settings->constructOutputGainMatrix(matchedMeasurement.camCoordinates.size()),
+        matchedMeasurement, settings->constructOutputGainMatrix(matchedMeasurement),//,matchedMeasurement.depthValue.size()
         settings->useEquivariantOutput, settings->useDiscreteInnovationLift);
 
     filterState.removeInvalidLandmarks();
@@ -266,7 +266,7 @@ void VIOFilter::processVisionDataRGBD(const VisionMeasurement& measurement) {
     VisionMeasurement matchedMeasurement = measurement;
     removeOutliers(matchedMeasurement);
     VisionMeasurement updated_measurement = processAndAddNewLandmarksRGBD(matchedMeasurement);
-    matchedMeasurement = updated_measurement;
+    // matchedMeasurement = updated_measurement;
 
     // addNewLandmarks(matchedMeasurement);
 
@@ -290,7 +290,7 @@ void VIOFilter::processVisionDataRGBD(const VisionMeasurement& measurement) {
 
     filterState.performVisionUpdate(
         // matched measurement
-        matchedMeasurement, settings->constructOutputGainMatrix(updated_measurement.camCoordinates.size()),
+        matchedMeasurement, settings->constructOutputGainMatrix(matchedMeasurement), 
         settings->useEquivariantOutput, settings->useDiscreteInnovationLift);
 
     filterState.removeInvalidLandmarks();
@@ -409,7 +409,7 @@ VisionMeasurement VIOFilter::processAndAddNewLandmarksRGBD(VisionMeasurement& me
                     isDepthMeasured.push_back(true); // Measured depth
                 }
                 depthMeasurements.push_back(depth);
-                measurement.depthValue[ccId] = depth;
+                // measurement.depthValue[ccId] = depth;
             }
         }
     }
@@ -422,18 +422,22 @@ VisionMeasurement VIOFilter::processAndAddNewLandmarksRGBD(VisionMeasurement& me
     auto depth_it = depthMeasurements.begin();
     std::for_each(newLandmarks.begin(), newLandmarks.end(), [&depth_it](Landmark& blm) {
         blm.p *= *depth_it;
+        // std::cout << blm.p<<std::endl;
         ++depth_it;
     });
 
     const int newN = newLandmarks.size();
     Eigen::MatrixXd newLandmarksCov = Eigen::MatrixXd::Identity(3 * newN, 3 * newN);
     
+    Eigen::MatrixXd initialNormal = Eigen::MatrixXd::Identity(3, 3) * settings->initialPointVariance * 0.05;
+    Eigen::MatrixXd initialDepth = Eigen::MatrixXd::Identity(3, 3) * settings->initialPointVariance;
+
     // Assign appropriate covariance values
     for (int i = 0; i < newN; i++) {
         if (isDepthMeasured[i]) {
-            newLandmarksCov.block<3, 3>(3 * i, 3 * i) *= settings->initialPointVariance*0.5; // Adjust this for different uncertainty
+            newLandmarksCov.block<3, 3>(3 * i, 3 * i,3,3) *= initialDepth; // Adjust this for different uncertainty
         } else {
-            newLandmarksCov.block<3, 3>(3 * i, 3 * i) *= settings->initialPointVariance;
+            newLandmarksCov.block<3, 3>(3 * i, 3 * i,3,3) *= initialNormal;
         }
     }
 
