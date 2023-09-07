@@ -92,7 +92,6 @@ VIOGroup liftInnovationDiscrete_euclid(const Eigen::VectorXd& totalInnovation, c
         const Vector3d qi1 = (qi + Gamma_qi);
         lift.Q[i].R = SO3d::SO3FromVectors(qi1.normalized(), qi.normalized());
         lift.Q[i].a = qi.norm() / qi1.norm();
-
         lift.id[i] = xi0.cameraLandmarks[i].id;
     }
 

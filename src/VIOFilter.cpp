@@ -341,80 +341,30 @@ void VIOFilter::addNewLandmarksRGB(const VisionMeasurement& measurement) {
     filterState.addNewLandmarks(newLandmarks, newLandmarksCov);
 }
 
-// VisionMeasurement VIOFilter::processAndAddNewLandmarksRGBD(VisionMeasurement& measurement) {
-
-//     // Grab all the new landmarks
-//     std::vector<Landmark> newLandmarks;
-//     std::vector<double> depthMeasurements;
-
-//     for (const pair<const int, Vector2d>& cc : measurement.camCoordinates) {
-//         const int& ccId = cc.first;
-//         if (none_of(filterState.X.id.begin(), filterState.X.id.end(), [&ccId](const int& i) { return i == ccId; })) {
-//             Vector3d bearing = measurement.cameraPtr->undistortPoint(cc.second);
-//             newLandmarks.emplace_back(Landmark{bearing, ccId});
-
-//             // Add depth if available, otherwise use a default value
-//             if (measurement.depthValue.find(ccId) != measurement.depthValue.end()) {
-//                 double depth = measurement.depthValue.at(ccId);
-//                 if (depth == 0) {
-//                     depth = settings->initialSceneDepth;
-//                     measurement.depthValue[ccId] = depth; // Update with default depth
-//                     depthMeasurements.push_back(depth);
-
-//                 } else {
-//                     depthMeasurements.push_back(depth);
-//                 } // Add the depth value to the vector
-//                 measurement.depthValue[ccId] = depth;
-//             }
-//         }
-//     }
-//     assert(newLandmarks.size() == depthMeasurements.size());
-//     if (newLandmarks.empty())
-//         return measurement;
-
-//     // Multiply landmark positions by corresponding depth measurements
-//     auto depth_it = depthMeasurements.begin();
-//     std::for_each(newLandmarks.begin(), newLandmarks.end(), [&depth_it](Landmark& blm) {
-//         blm.p *= *depth_it;
-//         ++depth_it;
-//     });
-
-//     const int newN = newLandmarks.size();
-//     Eigen::MatrixXd newLandmarksCov = Eigen::MatrixXd::Identity(3 * newN, 3 * newN) * settings->initialPointVariance;
-
-//     filterState.addNewLandmarks(newLandmarks, newLandmarksCov);
-//     return measurement;
-// }
 
 VisionMeasurement VIOFilter::processAndAddNewLandmarksRGBD(VisionMeasurement& measurement) {
 
     // Grab all the new landmarks
     std::vector<Landmark> newLandmarks;
     std::vector<double> depthMeasurements;
-    std::vector<bool> isDepthMeasured;
 
-    for (const pair<const int, Vector2d>& cc : measurement.camCoordinates) {
+    for (const pair<const int, Eigen::Vector2d>& cc : measurement.camCoordinates) {
         const int& ccId = cc.first;
+
         if (none_of(filterState.X.id.begin(), filterState.X.id.end(), [&ccId](const int& i) { return i == ccId; })) {
             Vector3d bearing = measurement.cameraPtr->undistortPoint(cc.second);
-            newLandmarks.emplace_back(Landmark{bearing, ccId});
 
-            // Add depth if available, otherwise use a default value
-            if (measurement.depthValue.find(ccId) != measurement.depthValue.end()) {
-                double depth = measurement.depthValue.at(ccId);
-                if (depth == 0) {
-                    depth = settings->initialSceneDepth; // Initialized depth
-                    isDepthMeasured.push_back(false);
-                } else {
-                    isDepthMeasured.push_back(true); // Measured depth
-                }
-                depthMeasurements.push_back(depth);
-                // measurement.depthValue[ccId] = depth;
+            // Check if a corresponding depth measurement exists and is non-zero for the camera coordinate ID
+            if (measurement.depthValue.find(ccId) != measurement.depthValue.end() && measurement.depthValue.at(ccId) != 0) {
+                depthMeasurements.push_back(measurement.depthValue.at(ccId));
+            } else {
+                depthMeasurements.push_back(settings->initialSceneDepth);
             }
+
+            newLandmarks.emplace_back(Landmark{bearing, ccId});
         }
     }
-    
-    assert(newLandmarks.size() == depthMeasurements.size());
+
     if (newLandmarks.empty())
         return measurement;
 
@@ -428,22 +378,22 @@ VisionMeasurement VIOFilter::processAndAddNewLandmarksRGBD(VisionMeasurement& me
 
     const int newN = newLandmarks.size();
     Eigen::MatrixXd newLandmarksCov = Eigen::MatrixXd::Identity(3 * newN, 3 * newN);
-    
-    Eigen::MatrixXd initialNormal = Eigen::MatrixXd::Identity(3, 3) * settings->initialPointVariance * 0.05;
-    Eigen::MatrixXd initialDepth = Eigen::MatrixXd::Identity(3, 3) * settings->initialPointVariance;
+    Eigen::MatrixXd initialNormal = Eigen::MatrixXd::Identity(3, 3) * settings->initialPointVariance;
+    Eigen::MatrixXd initialDepth = Eigen::MatrixXd::Identity(3, 3) * settings->initialPointVariance* 0.05;
 
     // Assign appropriate covariance values
     for (int i = 0; i < newN; i++) {
-        if (isDepthMeasured[i]) {
-            newLandmarksCov.block<3, 3>(3 * i, 3 * i,3,3) *= initialDepth; // Adjust this for different uncertainty
+        if (depthMeasurements[i] >= settings->initialSceneDepth) {
+            newLandmarksCov.block<3, 3>(3 * i, 3 * i) = initialNormal;
         } else {
-            newLandmarksCov.block<3, 3>(3 * i, 3 * i,3,3) *= initialNormal;
+            newLandmarksCov.block<3, 3>(3 * i, 3 * i) = initialDepth;
         }
     }
 
     filterState.addNewLandmarks(newLandmarks, newLandmarksCov);
     return measurement;
 }
+
 
 void VIOFilter::removeOldLandmarks(const vector<int>& measurementIds) {
     // Determine which indices have been lost
@@ -504,16 +454,6 @@ void VIOFilter::removeOutliers(VisionMeasurement& measurement) {
         }
     }
 
-    // // Iterate over depth residuals
-    // for (const auto& [lmId, yTilde_depth] : measurementResidual.depthValue) {
-    //     if (absoluteOutliers.count(lmId) || measurement.depthValue.count(lmId) == 0) {
-    //         continue;
-    //     }
-    //     double depthErrorAbs = std::abs(yTilde_depth);
-    //     if (depthErrorAbs > 20) { // Threshold for depth residual
-    //         proposedOutliers.emplace_back(lmId);
-    //     }
-    // }
 
     // Prioritise which landmarks to discard
     std::sort(

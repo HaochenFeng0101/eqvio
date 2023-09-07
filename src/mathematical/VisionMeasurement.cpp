@@ -35,16 +35,6 @@ std::vector<int> VisionMeasurement::getIddepth() const {
     return ids;
 }
 
-std::vector<int> VisionMeasurement::getValidDepthIds() const {
-    std::vector<int> validIds;
-    for (const auto& pair : depthValue) {
-        if (pair.second != 1000) {
-            validIds.push_back(pair.first);
-        }
-    }
-    return validIds;
-}
-
 
 std::map<int, cv::Point2f> VisionMeasurement::ocvCoordinates() const {
     std::map<int, cv::Point2f> ocvPoints;
@@ -55,21 +45,6 @@ std::map<int, cv::Point2f> VisionMeasurement::ocvCoordinates() const {
 }
 
 
-// void VIO_eqf::removeLandmarkByIndex(const int& idx) {
-//     xi0.cameraLandmarks.erase(xi0.cameraLandmarks.begin() + idx);
-//     X.id.erase(X.id.begin() + idx);
-//     X.Q.erase(X.Q.begin() + idx);
-//     removeRows(Sigma, VIOSensorState::CompDim + 3 * idx, 3);
-//     removeCols(Sigma, VIOSensorState::CompDim + 3 * idx, 3);
-// }
-
-// void VIO_eqf::removeLandmarkById(const int& id) {
-//     const auto it = find_if(
-//         xi0.cameraLandmarks.begin(), xi0.cameraLandmarks.end(), [&id](const Landmark& lm) { return lm.id == id; });
-//     assert(it != xi0.cameraLandmarks.end());
-//     const int idx = distance(xi0.cameraLandmarks.begin(), it);
-//     removeLandmarkByIndex(idx);
-// }
 
 // Used to remove measurement pairs with a specific id
 void VisionMeasurement::removeEntryById(const int& id) {
@@ -122,19 +97,13 @@ VisionMeasurement operator-(const VisionMeasurement& y1, const VisionMeasurement
 
     //add depth 
     // Subtract depth values
-    const double wired = 1000;
     for (const auto& depth1 : y1.depthValue) {
         const auto it2 = y2.depthValue.find(depth1.first);
-        if (depth1.second == 0) {
-            yDiff.depthValue[depth1.first] = wired; //give it a wired value
-            continue; // Skip if depth is 0
+        if (depth1.second <= 0) {
+            continue; // Skip if depth is invalid
         }
 
-        // if (it2 != y2.depthValue.end()) {
         yDiff.depthValue[depth1.first] = depth1.second - it2->second;
-        // } else {
-        //     yDiff.depthValue[depth1.first] = wired; // or assign any other value/operation you see fit
-        // }
     }
 
     return yDiff;
@@ -149,7 +118,7 @@ VisionMeasurement::operator Eigen::VectorXd() const {
     // return result;
     
     vector<int> ids = getIds();
-    vector<int> validdepthid = getValidDepthIds();
+    vector<int> validdepthid = getIddepth();
     Eigen::VectorXd result = Eigen::VectorXd(2 * ids.size() + validdepthid.size()); 
 
     // for (size_t i = 0; i < ids.size(); ++i) {
@@ -169,10 +138,7 @@ VisionMeasurement::operator Eigen::VectorXd() const {
     //     }
     size_t offset = 2 * ids.size(); // initial offset is set to after all the 2D camCoordinates
     for (size_t i = 0; i < validdepthid.size(); ++i) {
-        if (depthValue.find(validdepthid[i]) != depthValue.end()) {
-            result(offset) = depthValue.at(validdepthid[i]); // corresponding depth value
-            offset += 1;
-        }
+        result(offset+i) = depthValue.at(validdepthid[i]); // corresponding depth value
     }
     return result;  
 }
@@ -185,8 +151,14 @@ VisionMeasurement operator+(const VisionMeasurement& y, const Eigen::VectorXd& e
     VisionMeasurement result = y;
     size_t i = 0;
     for (auto& pixelCoords : result.camCoordinates) {
-        pixelCoords.second += eta.segment<2>(3 * i); // 3 * i instead of 2 * i
-        result.depthValue[pixelCoords.first] += eta(3 * i + 2); // add corresponding depth value
+        pixelCoords.second += eta.segment<2>(2 * i); // 3 * i instead of 2 * i
+        // result.depthValue[pixelCoords.first] += eta(3 * i + 2); // add corresponding depth value
+        ++i;
+    }
+    i = 0;
+    const size_t offset = result.camCoordinates.size() * 2;
+    for (auto& depthValue : result.depthValue) {
+        depthValue.second += eta(offset+i);
         ++i;
     }
     return result;

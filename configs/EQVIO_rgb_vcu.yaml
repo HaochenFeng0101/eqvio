@@ -1,47 +1,47 @@
 GIFT:
   equaliseImageHistogram: false
-  featureDist: 46 #46 #min dis between feature
+  featureDist: 35 #46 #min dis between feature
   featureSearchThreshold: 1
-  maxError: 70 #66 #66.21556706799433 # maximum allowable reprojection error in the tracking
-  maxFeatures: 38 #38
+  maxError: 66 #66.21556706799433 # maximum allowable reprojection error in the tracking
+  maxFeatures: 35 #38
   maxLevel: 3
   minHarrisQuality: 0.079 #0.0792713927794865  # track high-quality features
   ransacParams:
-    inlierThreshold: 0.00023121620935037416
-    maxIterations: 40 #38
+    inlierThreshold: 0.002 #0.00023121620935037416
+    maxIterations: 38
     minDataPoints: 5
     minInliers: 21
   trackedFeatureDist: 35  #35
-  winSize: 15 #20
+  winSize: 20 #20
 eqf:
   initialValue:
-    sceneDepth: 4.2 #4.2 
+    sceneDepth: 3.0 #4.2 
   initialVariance:
     attitude: 0.23565029126052572
-    biasAcc: 0.5 #0.05813333765300104
-    biasGyr: 0.5 #1.34 #1.79515771076
-    cameraAttitude: 0.3 #0.0010228558965517584
-    cameraPosition: 0.3 #0.023501400846134893
-    point: 10 #120 #120  # uncertainty in the estimated 3D position of these points
-    pointDepth: 1.0
-    position: 0.1
+    biasAcc: 0.05813333765300104
+    biasGyr: 0.05 #1.34 #1.79515771076
+    cameraAttitude: 0.0010228558965517584
+    cameraPosition: 0.023501400846134893
+    point: 20  # uncertainty in the estimated 3D position of these points
+    pointDepth: 1
+    position: 1
     velocity: 1e-5 #0.000001
   measurementNoise:
     feature: 4 #3
     featureOutlierAbs: 7.552186665580312 #sensitve to this two 
-    featureOutlierProb: 6 #5.04229809583062128
-    featureRetention: 0.7 #0.8786
-    feature_depth: 0.1
+    featureOutlierProb: 7.04229809583062128
+    featureRetention: 0.35 #0.8786
+    Noisedepth: 0.1
   processVariance:
     attitude: 3e-05                  #6.025875320811407e-03
-    biasAcc: 0.0003 #0.001
-    biasGyr: 0.0005                #0.01
+    biasAcc: 3e-5 #0.0003 #0.001
+    biasGyr: 5e-4 #0.0005                #0.01
     cameraAttitude: 0.002      #9.075e-2 #9.075382174045239e-04
     cameraPosition: 1e-05                  #5.2188313140115635e-04
-    point: 0.02 #0.02051              #0.0029845436136043135
-    pointdepth: 0.01
+    point: 0.0008 #0.02 #0.02051              #0.0029845436136043135
+    depth: 0.1
     position: 0.05                 #9.981466095928483e-02
-    velocity: 0.02 #0.00025                #0.02
+    velocity: 0.008 #0.00025                #0.02
   settings:
     coordinateChoice: InvDepth
     fastRiccati: true
@@ -51,20 +51,19 @@ eqf:
     useFeaturePredictions: false #false #
     useInnovationLift: true
     useMedianDepth: false
-  velocityNoise:
-    acc: 0.0004259612236196161     #tune this
-    accBias: 5.35e-6 #0.00027133055273580553
-    gyr: 2.08e-4 #0.0024103444611386107 #0.001
-    gyrBias: 2e-7 #0.00031098461990487613  #2.0e-4
   #velocityNoise:
-  #  acc: 0.041830000000000006 #tune this
-  #  accBias: 0.00029
-  #  gyr: 0.0001
-  #  gyrBias: 2e-05                  #2.0e-4
+   #accBias: 5.35e-6 #0.00027133055273580553
+    #gyr: 2.08e-4 #0.0024103444611386107 #0.001
+    #gyrBias: 2e-7 #0.00031098461990487613  #2.0e-4
+  velocityNoise:
+    acc: 0.041830000000000006 #tune this
+    accBias: 0.00029
+    gyr: 0.0001
+    gyrBias: 2e-05                  #2.0e-4
 main:
-  cameraLag: 0.012 #0.00457               #0.003
+  cameraLag: 0.01               #0.003
   limitRate: 0.0
-  startTime: 0.0  #maual: 193614.659717371  hall2:3416.940431843
+  startTime: 0.0  
   writeState: true
 sim:
   cameraOffset:

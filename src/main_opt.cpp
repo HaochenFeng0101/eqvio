@@ -371,7 +371,9 @@ VisionMeasurement convertGIFTFeaturesRGBD(const std::vector<GIFT::Feature>& GIFT
             }
             // Add the feature to the measurement, including its depth
             measurement.camCoordinates[f.idNumber] = Eigen::Vector2d(f.camCoordinatesEigen().x(), f.camCoordinatesEigen().y());
-            measurement.depthValue[f.idNumber] = depthInMeters;
+            if (depthInMeters > 0){
+                measurement.depthValue[f.idNumber] = depthInMeters;
+            }
         }
     }
     return measurement;

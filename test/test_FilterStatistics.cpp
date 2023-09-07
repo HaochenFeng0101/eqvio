@@ -22,7 +22,7 @@
 #include "testing_utilities.h"
 #include "gtest/gtest.h"
 
-constexpr static int numParticles = 1000;
+constexpr static int numParticles = 5000;
 
 class FilterStatisticsTest : public ::testing::Test {
   protected:
@@ -37,6 +37,7 @@ class FilterStatisticsTest : public ::testing::Test {
         // settings.initialAttitudeVariance = pow(0.00001, 2);
         settings.initialVelocityVariance = pow(0.1, 2);
         settings.initialPositionVariance = pow(0.001, 2);
+        settings.measurementNoisedepth = pow(0.5, 2);
         filter = VIO_eqf{getCoordinates(settings.coordinateChoice), xi0, XHat0, Sigma0()};
         particles = generateInitialStateParticles(Sigma0());
 
@@ -155,10 +156,10 @@ TEST_F(FilterStatisticsTest, outputDistribution) {
             Eigen::VectorXd outputError = measOutput - estOutput;
             std::cout <<outputError <<std::endl;
             std::cout <<outputGainInv<<std::endl;
-            std::cout<< "outputerror"<<outputError<<std::endl;
+            std::cout<< "outputerror: "<<outputError<<std::endl;
             const double logLikelihood = outputError.transpose() * outputGainInv * outputError;
             const double scaledProbability = std::exp(-0.5 * logLikelihood);
-            std::cout <<"sacle prob" << scaledProbability <<std::endl;
+            std::cout <<"sacle prob:  " << scaledProbability <<std::endl;
             return scaledProbability;
         });
 
@@ -174,4 +175,14 @@ TEST_F(FilterStatisticsTest, outputDistribution) {
     filter.performVisionUpdate(measOutput, outputGain);
 
     EXPECT_NEAR(computeMeanNEES(particles), 1.0, 0.5);
+    
+    // const double computeMeanNEES(std::vector<VIOState>& particles) const {
+    //     std::vector<double> NEESValues(numParticles);
+    //     std::transform(particles.begin(), particles.end(), NEESValues.begin(), [this](const VIOState& xi) {
+    //         return filter.computeNEES(xi);
+    //     });
+
+    //     const double meanNEES = std::accumulate(NEESValues.begin(), NEESValues.end(), 0.0) / numParticles;
+    //     return meanNEES;
+    // }
 }

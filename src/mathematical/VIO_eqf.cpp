@@ -106,7 +106,7 @@ void VIO_eqf::integrateRiccatiStateDiscrete(
 void VIO_eqf::performVisionUpdate(
     const VisionMeasurement& measurement, const Eigen::MatrixXd& outputGainMatrix, const bool& useEquivariantOutput,
     const bool& discreteCorrection) {
-    if (measurement.camCoordinates.empty())
+    if (measurement.camCoordinates.empty()||measurement.depthValue.empty())
         return;
     
     const VisionMeasurement estimatedMeasurement = measureSystemState(stateEstimate(), measurement.cameraPtr);
@@ -117,16 +117,18 @@ void VIO_eqf::performVisionUpdate(
     // Use the discrete update form
     // std::cout << "Size of Ct: " << Ct.rows() << "x" << Ct.cols() << std::endl;
     // std::cout << "Size of Sigma: " << Sigma.rows() << "x" << Sigma.cols() << std::endl;
+    // std::cout << "sigma" <<Sigma <<std::endl;
     // std::cout << "Size of Ct * Sigma * Ct.transpose(): " << (Ct * Sigma * Ct.transpose()).rows() << "x" << (Ct * Sigma * Ct.transpose()).cols() << std::endl;
+    // std::cout <<"outputgain" <<outputGainMatrix <<std::endl;
     // std::cout << "Size of outputGainMatrix: " << outputGainMatrix.rows() << "x" << outputGainMatrix.cols() << std::endl;
     // std::cout << "Size of yTilde: " << yTilde.rows() << std::endl
-    ;
+    // std::cout << "ct*sigma*ct_-1"<< Ct * Sigma * Ct.transpose() <<std::endl;
     const auto& SInv = (Ct * Sigma * Ct.transpose() + outputGainMatrix).inverse();
     const auto& K = Sigma * Ct.transpose() * SInv;
     
     // std::cout << "Size of SInv: " << SInv.rows() << "x" << SInv.cols() << std::endl;
     // std::cout << "Size of K: " << K.rows() << "x" << K.cols() << std::endl;
-    
+    // std::cout << "ytilde "<<yTilde<<std::endl;
     const Eigen::VectorXd Gamma = K * yTilde;
     // std::cout << "Size of Gamma: " << Gamma.rows() << "x" << Gamma.cols() << std::endl;
     assert(!Gamma.hasNaN());
@@ -141,7 +143,7 @@ void VIO_eqf::performVisionUpdate(
 
     X = Delta * X;
     Sigma = Sigma - K * Ct * Sigma;
-
+    // std::cout<< "final sigma "<<Sigma<<std::endl;
     assert(!Sigma.hasNaN());
     assert(!X.hasNaN());
 }
@@ -176,6 +178,7 @@ double VIO_eqf::computeNEES(const VIOState& trueState) const {
 
     const VIOState stateError = stateGroupAction(X.inverse(), truncatedState);
     const Eigen::VectorXd stateErrorLinearised = coordinateSuite->stateChart(stateError, xi0);
+    // std::cout<<stateErrorLinearised<<std::endl;
     const Eigen::MatrixXd informationMat = Sigma.inverse();
     const double NEES = stateErrorLinearised.transpose() * informationMat * stateErrorLinearised;
     return NEES / truncatedState.Dim();

@@ -63,8 +63,9 @@ struct VIOFilter::Settings {
     double velocityProcessVariance = 0.001;  ///< The variance of the Wiener process of the velocity error
     double cameraAttitudeProcessVariance = 0.001; ///< The variance of the Wiener process of the camera attitude error
     double cameraPositionProcessVariance = 0.001; ///< The variance of the Wiener process of the camera position error
-    double pointProcessVariance = 0.001;          ///< The variance of the Wiener process of the landmark position error
-    double pointProcessVariancedepth = 0.1;
+    double pointProcessVariance = 0.01;          ///< The variance of the Wiener process of the landmark position error
+    //depth
+    double depthProcessvariance = 0.01;
 
     double velGyrNoise = 1e-4;    ///< The noise of the gyroscope measurements
     double velAccNoise = 1e-3;    ///< The noise of the accelerometer measurements
@@ -76,6 +77,7 @@ struct VIOFilter::Settings {
     double outlierThresholdAbs = 1e8;  ///< The absolute outlier threshold. A lower value means more outliers.
     double outlierThresholdProb = 1e8; ///< The relative outlier threshold. A lower value means more outliers.
     double featureRetention = 0.3; ///< The minimum proportion of features that are always kept, regardless of outliers.
+    //depth
     double measurementNoisedepth = 0.1;  ///< noise of depth measurement
 
     double initialAttitudeVariance = 1.0e-4;       ///< The initial variance of the attitude error
@@ -84,7 +86,8 @@ struct VIOFilter::Settings {
     double initialCameraAttitudeVariance = 1.0e-5; ///< The initial variance of the camera attitude error
     double initialCameraPositionVariance = 1.0e-4; ///< The initial variance of the camera position error
     double initialPointVariance = 1.0;     ///< The initial variance of the body-fixed landmark position error 1.0
-    double initialPointDepthVariance = 2.0;  ///< The initial variance of the body-fixed landmark depth error (optional)
+    //depth
+    double initialPointDepthVariance = -1.0;  ///< The initial variance of the body-fixed landmark depth error (optional)
     double initialBiasOmegaVariance = 0.1; ///< The initial variance of the gyroscope bias error
     double initialBiasAccelVariance = 0.1; ///< The initial variance of the accelerometer bias error
     double initialSceneDepth = 1.0;        ///< The depth value used to initialise new features as landmarks
@@ -135,6 +138,9 @@ inline VIOFilter::Settings::Settings(const YAML::Node& configNode) {
     safeConfig(configNode, "processVariance:position", positionProcessVariance);
     safeConfig(configNode, "processVariance:velocity", velocityProcessVariance);
     safeConfig(configNode, "processVariance:point", pointProcessVariance);
+    //depth noise
+    safeConfig(configNode,"processVariance:depth", depthProcessvariance);
+    
     safeConfig(configNode, "processVariance:cameraAttitude", cameraAttitudeProcessVariance);
     safeConfig(configNode, "processVariance:cameraPosition", cameraPositionProcessVariance);
 
@@ -142,6 +148,7 @@ inline VIOFilter::Settings::Settings(const YAML::Node& configNode) {
     safeConfig(configNode, "measurementNoise:featureOutlierAbs", outlierThresholdAbs);
     safeConfig(configNode, "measurementNoise:featureOutlierProb", outlierThresholdProb);
     safeConfig(configNode, "measurementNoise:featureRetention", featureRetention);
+    safeConfig(configNode,"measurementNoise:Noisedepth", measurementNoisedepth);
 
     safeConfig(configNode, "velocityNoise:gyr", velGyrNoise);
     safeConfig(configNode, "velocityNoise:acc", velAccNoise);
@@ -158,7 +165,6 @@ inline VIOFilter::Settings::Settings(const YAML::Node& configNode) {
     safeConfig(configNode, "initialVariance:biasAcc", initialBiasAccelVariance);
     safeConfig(configNode, "initialVariance:cameraAttitude", initialCameraAttitudeVariance);
     safeConfig(configNode, "initialVariance:cameraPosition", initialCameraPositionVariance);
-
     // Configure computation methods
     safeConfig(configNode, "settings:useDiscreteInnovationLift", useDiscreteInnovationLift);
     safeConfig(configNode, "settings:useDiscreteVelocityLift", useDiscreteVelocityLift);
@@ -194,7 +200,7 @@ inline Eigen::MatrixXd VIOFilter::Settings::constructStateGainMatrix(const size_
         PMat(VIOSensorState::CompDim + 3 * i + 1, VIOSensorState::CompDim + 3 * i + 1) *= this->pointProcessVariance;
         // Set the third dimension of the 3x3 block to depthVariance
         PMat(VIOSensorState::CompDim + 3 * i + 2, VIOSensorState::CompDim + 3 * i + 2) *=
-            this->pointProcessVariancedepth;
+            this->depthProcessvariance;
     }
     return PMat;
 }
