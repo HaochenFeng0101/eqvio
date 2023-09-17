@@ -32,7 +32,7 @@ class VIOVisualiser {
     std::map<int, int> pointLifetimeCounter;         ///< The number of frames each point has been seen by id number.
     std::map<int, Eigen::Vector3d> persistentPoints; ///< The points that have existed for a sufficiently long time.
     std::vector<Eigen::Vector3d> positionTrail;      ///< The history of all robot positions over time.
-
+    std::map<int, Eigen::Vector3d> depthpoints;
     std::unique_ptr<Plotter> plotter; ///< A plotter instance to use when drawing the VIO state.
 #endif
 

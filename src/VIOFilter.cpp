@@ -294,8 +294,7 @@ void VIOFilter::processVisionDataRGBD(const VisionMeasurement& measurement) {
         settings->useEquivariantOutput, settings->useDiscreteInnovationLift);
 
     filterState.removeInvalidLandmarks();
-    // already removed by Q
-    //  filterState.removeInvalidLandmarksForDepth();
+  
 
     loopTimer.endTiming("correction");
 
@@ -379,7 +378,7 @@ VisionMeasurement VIOFilter::processAndAddNewLandmarksRGBD(VisionMeasurement& me
     const int newN = newLandmarks.size();
     Eigen::MatrixXd newLandmarksCov = Eigen::MatrixXd::Identity(3 * newN, 3 * newN);
     Eigen::MatrixXd initialNormal = Eigen::MatrixXd::Identity(3, 3) * settings->initialPointVariance;
-    Eigen::MatrixXd initialDepth = Eigen::MatrixXd::Identity(3, 3) * settings->initialPointVariance* 0.05;
+    Eigen::MatrixXd initialDepth = Eigen::MatrixXd::Identity(3, 3) * settings->initialPointVariance; //0.5
 
     // Assign appropriate covariance values
     for (int i = 0; i < newN; i++) {
@@ -437,7 +436,6 @@ void VIOFilter::removeOutliers(VisionMeasurement& measurement) {
         }
     }
 
-    // Logic for depth outliers
 
     std::map<int, double> probabilisticOutliers;
     const VisionMeasurement& measurementResidual = measurement - yHat;
@@ -485,21 +483,7 @@ void VIOFilter::removeOutliers(VisionMeasurement& measurement) {
         measurement.depthValue.erase(lmId); // Erase depth values for outliers
     });
 
-    // // Additional code to handle depth-based outliers
-    // for (const auto& [lmId, yHat_depth] : yHat.depthValue) { // Assuming depthValue is part of the yHat structure
-    //     if (measurement.depthValue.count(lmId) == 0) {
-    //         continue;
-    //     }
-    //     double depthErrorAbs =  yHat_depth-measurement.depthValue.at(lmId);
-    //     depthErrorAbs = std::abs(depthErrorAbs);
-    //     if (depthErrorAbs > 30) { // Threshold for depth
-    //         filterState.removeLandmarkById(lmId);
-    //         measurement.camCoordinates.erase(lmId);
-    //         measurement.depthValue.erase(lmId); // Erase depth values for outliers
-    //         std::cout<< "error "<< depthErrorAbs << std::endl;
-    //         std::cout << "remove lmk id from measurement: " << lmId <<std::endl;
-    //     }
-    // }
+
 }
 
 double VIOFilter::getMedianSceneDepth() const {

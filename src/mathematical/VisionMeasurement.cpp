@@ -99,7 +99,7 @@ VisionMeasurement operator-(const VisionMeasurement& y1, const VisionMeasurement
     // Subtract depth values
     for (const auto& depth1 : y1.depthValue) {
         const auto it2 = y2.depthValue.find(depth1.first);
-        if (depth1.second <= 0) {
+        if (depth1.second == 0) {
             continue; // Skip if depth is invalid
         }
 

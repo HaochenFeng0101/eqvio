@@ -279,7 +279,6 @@ Eigen::Matrix<double, 1, 3> EqFoutputMatrixCiStar_depth_invdepth(
     ind2euc.block<3, 2>(0, 0) = r0 * sphereChart_stereo.chartInvDiff0(y0);
     ind2euc.block<3, 1>(0, 2) = -r0 * q0;
 
-
     Eigen::Matrix<double, 1, 3> C0i_depth = EqFCoordinateSuite_euclid.outputMatrixCiStarDepth(q0,QHat, measurement_depth) * ind2euc;
     return C0i_depth;
 }

@@ -1,0 +1,78 @@
+GIFT:
+  equaliseImageHistogram: false
+  featureDist: 40 #46 #46 #min dis between feature
+  featureSearchThreshold: 1
+  maxError: 70 #66 #66.21556706799433 # maximum allowable reprojection error in the tracking
+  maxFeatures: 30 #30
+  maxLevel: 3
+  minHarrisQuality: 0.079 #0.0792713927794865  # track high-quality features
+  ransacParams:
+    inlierThreshold: 0.00023121620935037416
+    maxIterations: 40 #38
+    minDataPoints: 5
+    minInliers: 21
+  trackedFeatureDist: 30 #45
+  winSize: 20 #20
+eqf:
+  initialValue:
+    sceneDepth: 3.0 #2.8 
+  initialVariance:
+    attitude: 0.023565029126052572
+    biasAcc: 0.01 #0.05813333765300104
+    biasGyr: 0.01 #1.34 #1.79515771076
+    cameraAttitude: 0.010228558965517584
+    cameraPosition: 0.023501400846134893
+    point: 10 #120 #120  # uncertainty in the estimated 3D position of these points
+    position: 0.1
+    velocity: 0.2 #8.974852995731e-02
+  measurementNoise:
+    feature: 2.5 #3
+    featureOutlierAbs: 6.552186665580312 #sensitve to this two 
+    featureOutlierProb: 5.5 #5.04229809583062128
+    featureRetention: 0.358594708334486176
+    Noisedepth: 0.12
+  processVariance:
+    attitude: 0.0002 #6.025875320811407e-03
+    biasAcc: 0.0001 #0.001
+    biasGyr: 0.0001 #0.01
+    cameraAttitude: 9.075e-4 #9.075382174045239e-04
+    cameraPosition: 5.2188313140115635e-04
+    point: 0.001 #0.0029845436136043135
+    depth: 0.001
+    position: 0.009 #9.981466095928483e-02
+    velocity: 0.0005 #0.02
+  settings:
+    coordinateChoice: InvDepth
+    fastRiccati: true
+    useDiscreteInnovationLift: false
+    useDiscreteVelocityLift: true
+    useEquivariantOutput: true
+    useFeaturePredictions: false #false #
+    useInnovationLift: true
+    useMedianDepth: false
+  velocityNoise:
+   acc: 0.041830
+   accBias: 5.35e-6 #0.00027133055273580553
+   gyr: 2.08e-4 #0.0024103444611386107 #0.001
+   gyrBias: 2e-7 #0.00031098461990487613  #2.0e-4
+main:
+  cameraLag: 0.0 #0.001
+  limitRate: 0.0
+  startTime: 0.0
+  writeState: true
+sim:
+  cameraOffset:
+  - xw
+  - -0.04844625116694773
+  - -0.08142350220051031
+  - 0.003102425417307478
+  - 0.7021240268103595
+  - -0.006484783602096129
+  - 0.013217864997878212
+  - 0.7017528002920512
+  fieldOfView: 60
+  maxFeatures: 40
+  numPoints: 5000
+  randomSeed: 0
+  wallDistance: 1.0
+  
