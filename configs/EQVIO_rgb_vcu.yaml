@@ -1,9 +1,9 @@
 GIFT:
   equaliseImageHistogram: false
-  featureDist: 40 #46 #46 #min dis between feature
-  featureSearchThreshold: 0.97
-  maxError: 70 #66 #66.21556706799433 # maximum allowable reprojection error in the tracking
-  maxFeatures: 30 #30
+  featureDist: 30                 #46 #46 #min dis between feature
+  featureSearchThreshold: 0.7
+  maxError: 45.92700  #66 #66.21556706799433 # maximum allowable reprojection error in the tracking
+  maxFeatures: 50 #30
   maxLevel: 3
   minHarrisQuality: 0.079 #0.0792713927794865  # track high-quality features
   ransacParams:
@@ -11,37 +11,37 @@ GIFT:
     maxIterations: 40 #38
     minDataPoints: 5
     minInliers: 21
-  trackedFeatureDist: 30 #45
-  winSize: 20 #20
+  trackedFeatureDist: 7.72652  #45
+  winSize: 21 #20
 eqf:
   initialValue:
-    sceneDepth: 3.0 #2.8 
+    sceneDepth: 3.5 #2.8 
     point: 0.0
   initialVariance:
-    attitude: 0.2
-    biasAcc: 0.02   #0.05813333765300104
-    biasGyr: 10 #830.4005 
+    attitude: 0.98
+    biasAcc: 0.2067              #0.05813333765300104
+    biasGyr: 2            #830.4005 
     cameraAttitude: 0 #0.010228558965517584
     cameraPosition: 0 #0.023501400846134893
     point: 20 #120 #120  # uncertainty in the estimated 3D position of these points
     position: 0.1
     velocity: 0.2 #8.974852995731e-02
   measurementNoise:
-    feature: 2 #3
-    featureOutlierAbs: 5.786039830763951  #sensitve to this two 
-    featureOutlierProb: 5.717  #5.04229809583062128
-    featureRetention: 0.7
-    Noisedepth: 0.9
+    feature: 3.7 #3
+    featureOutlierAbs: 5.20744   #sensitve to this two 
+    featureOutlierProb: 0.4402             #5.04229809583062128
+    featureRetention: 0.6
+    Noisedepth: 0.11
   processVariance:
-    attitude: 0.0011                #6.025875320811407e-03
+    attitude: 0.0129                #6.025875320811407e-03
     biasAcc: 0.0                #0.001
     biasGyr: 0.0    #0.01
     cameraAttitude: 0 #9.075e-3 #9.075382174045239e-04
     cameraPosition: 0 #5.2188313140115635e-03
-    point: 0.0    #0.0029845436136043135
-    depth: 0.08
-    position: 0.0    #9.981466095928483e-02
-    velocity: 0.0041                #0.02
+    point: 0 #0.0029845436136043135
+    depth: 0.6
+    position: 9e-05   #9.981466095928483e-02
+    velocity: 0.0004                #0.02 #0.003418281000000001
   settings:
     coordinateChoice: InvDepth
     fastRiccati: true
