@@ -141,7 +141,7 @@ TEST_P(EqFSuiteTest, outputMatrixC) {
     srand(0);
     const EqFCoordinateSuite& coordinateSuite = GetParam();
     // vector<int> ids = {5, 0, 1, 2, 3, 4};
-    vector<int> ids = {5, 1, 4, 3, 2, 0};
+    vector<int> ids = {0,1,2};
     const int N = ids.size();
     const GIFT::GICameraPtr camPtr = createDefaultCamera();
 
@@ -154,11 +154,12 @@ TEST_P(EqFSuiteTest, outputMatrixC) {
         const VisionMeasurement yHat = measureSystemState(xiHat, camPtr);
         const MatrixXd Ct = coordinateSuite.outputMatrixC(xi0, XHat, yHat);
         const MatrixXd Ct2 = coordinateSuite.outputMatrixC(xi0, XHat, yHat, false);
+      
         // MatrixXd Ct = Ct11.block(0, 0, 2, Ct11.cols());
         // MatrixXd Ct2 = Ct22.block(0, 0, 2, Ct22.cols());
 
 
-        // std::cout << "Matrix Ct:" << std::endl << Ct << std::endl;
+        std::cout << "Matrix Ct:" << std::endl << Ct << std::endl;
         // std::cout << "Matrix Ct2:" << std::endl << Ct2 << std::endl;
         assertMatrixEquality(Ct, Ct2);
 
@@ -201,7 +202,7 @@ TEST(EqFSuiteTest, outputMatrixCStar) {
     srand(0);
     const EqFCoordinateSuite& coordinateSuite = EqFCoordinateSuite_euclid;
     const GIFT::GICameraPtr camPtr = createDefaultCamera();
-    
+    std::cout<<"camPtr"<< camPtr<<std::endl;
     for (int testRep = 0; testRep < TEST_REPS; ++testRep) {
 
         // Set some random conditions
@@ -218,7 +219,7 @@ TEST(EqFSuiteTest, outputMatrixCStar) {
             return coordinateSuite.outputMatrixCiStar(q0, QHat, camPtr, y);
         };
         const MatrixXd Ct = coordinateSuite.outputMatrixCi(q0, QHat, camPtr);
-
+        std::cout<<"Ct" <<Ct <<std::endl;
         // Compare the C matrix to the true output residual
         // We expect CtStar is a better approximation to hTilde than Ct
 

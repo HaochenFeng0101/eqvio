@@ -33,7 +33,7 @@ eqf:
     featureRetention: 0.6
     Noisedepth: 0.11
   processVariance:
-    attitude: 0.0129                #6.025875320811407e-03
+    attitude: 0.00001                #6.025875320811407e-03
     biasAcc: 0.0                #0.001
     biasGyr: 0.0    #0.01
     cameraAttitude: 0 #9.075e-3 #9.075382174045239e-04
